@@ -15,14 +15,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
 	return VK_FALSE;
 }
 
-struct QueueFamilyIndices
-{
-	int graphicsFamily = -1;
-	bool isComplete()
-	{
-		return graphicsFamily >= 0;
-	}
-};
 
 void HelloTriangleApplication::run() 
 {
@@ -79,7 +71,7 @@ void HelloTriangleApplication::pickPhysicalDevice()
 }
 
 
-QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
+HelloTriangleApplication::QueueFamilyIndices HelloTriangleApplication::findQueueFamilies(VkPhysicalDevice device)
 {
 	QueueFamilyIndices indices;
 
@@ -89,12 +81,18 @@ QueueFamilyIndices findQueueFamilies(VkPhysicalDevice device)
 	std::vector<VkQueueFamilyProperties> queueFamilies(queueFamilyCount);
 	vkGetPhysicalDeviceQueueFamilyProperties(device, &queueFamilyCount, queueFamilies.data());
 
+	VkBool32 presentSupport = false;
 	int i = 0;
 	for(const auto& queueFamily : queueFamilies)
 	{
+		vkGetPhysicalDeviceSurfaceSupportKHR(device, i, surface, &presentSupport);
 		if(queueFamily.queueCount > 0 && queueFamily.queueFlags&VK_QUEUE_GRAPHICS_BIT)
 		{
 			indices.graphicsFamily = i;
+		}
+		if(queueFamily.queueCount > 0 && presentSupport)
+		{
+			indices.presentFamily = i;
 		}
 		if(indices.isComplete())
 		{

@@ -3,6 +3,17 @@
 
 class HelloTriangleApplication
 {
+
+	struct QueueFamilyIndices
+	{
+		int graphicsFamily = -1;
+		int presentFamily = -1;
+		bool isComplete()
+		{
+			return graphicsFamily >= 0 && presentFamily >= 0;
+		}
+	};
+
 public:
 	void run();
 
@@ -35,6 +46,8 @@ private:
 	void pickPhysicalDevice();
 
 	void createLogicalDevice();
+
+	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
 	std::vector<const char*> getRequiredExtensions();
 
