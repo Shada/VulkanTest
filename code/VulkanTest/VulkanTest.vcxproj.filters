@@ -23,10 +23,13 @@
     </ClCompile>
   </ItemGroup>
   <ItemGroup>
-    <ClInclude Include="VDeleter.h">
+    <ClInclude Include="VulkanTestApplication.h">
       <Filter>Header Files</Filter>
     </ClInclude>
-    <ClInclude Include="VulkanTestApplication.h">
+    <ClInclude Include="stdafx.h">
+      <Filter>Header Files</Filter>
+    </ClInclude>
+    <ClInclude Include="VDeleter.h">
       <Filter>Header Files</Filter>
     </ClInclude>
   </ItemGroup>

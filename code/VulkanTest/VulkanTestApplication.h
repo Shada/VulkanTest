@@ -1,33 +1,44 @@
 #pragma once
+#include "stdafx.h"
 
-#define GLFW_INCLUDE_VULKAN
-#include <GLFW/glfw3.h>
-
-#include "VDeleter.h"
-
-const int WIDTH = 800;
-const int HEIGHT = 600;
-
-class VulkanTestApplication
+class HelloTriangleApplication
 {
 public:
 	void run();
 
 private:
-	void mainLoop();
-
-	// Vulkan stuff
-	void initVulkan();
-
-	void createInstance();
+	GLFWwindow* window;
 
 	VDeleter<VkInstance> instance{ vkDestroyInstance };
 
-	// GFLW stuff
+	VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
+
+	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+	VkQueue graphicsQueue;
+
+	VDeleter<VkDevice> device{ vkDestroyDevice };
+
+	VDeleter<VkSurfaceKHR> surface{ instance,vkDestroySurfaceKHR };
+
 	void initWindow();
 
-	GLFWwindow *window;
-	unsigned int glfwExtensionCount;
-	const char** glfwExtensions;
+	void initVulkan();
 
+	void mainLoop();
+
+	void createInstance();
+
+	void setupDebugCallback();
+
+	void createSurface();
+
+	void pickPhysicalDevice();
+
+	void createLogicalDevice();
+
+	std::vector<const char*> getRequiredExtensions();
+
+	bool checkValidationLayerSupport();
+
+	bool isDeviceSuitable(VkPhysicalDevice);
 };
