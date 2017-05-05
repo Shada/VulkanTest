@@ -25,7 +25,9 @@ private:
 	VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
 
 	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+
 	VkQueue graphicsQueue;
+	VkQueue presentQueue;
 
 	VDeleter<VkDevice> device{ vkDestroyDevice };
 
