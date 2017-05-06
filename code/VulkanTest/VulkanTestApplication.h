@@ -3,7 +3,8 @@
 
 class HelloTriangleApplication
 {
-
+private:
+	// structs
 	struct QueueFamilyIndices
 	{
 		int graphicsFamily = -1;
@@ -14,12 +15,25 @@ class HelloTriangleApplication
 		}
 	};
 
+	struct SwapChainSupportDetails
+	{
+		VkSurfaceCapabilitiesKHR capabilities;
+		std::vector<VkSurfaceFormatKHR> formats;
+		std::vector<VkPresentModeKHR> presentModes;
+	};
+
 public:
 	void run();
 
 private:
-	GLFWwindow* window;
 
+	void mainLoop();
+
+	// glfw stuff
+	GLFWwindow* window;
+	void initWindow();
+
+	// vulkan stuff
 	VDeleter<VkInstance> instance{ vkDestroyInstance };
 
 	VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
@@ -33,11 +47,7 @@ private:
 
 	VDeleter<VkSurfaceKHR> surface{ instance,vkDestroySurfaceKHR };
 
-	void initWindow();
-
 	void initVulkan();
-
-	void mainLoop();
 
 	void createInstance();
 
@@ -58,4 +68,6 @@ private:
 	bool isDeviceSuitable(VkPhysicalDevice);
 
 	bool checkDeviceExtensionSupport(VkPhysicalDevice);
+
+	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice);
 };
