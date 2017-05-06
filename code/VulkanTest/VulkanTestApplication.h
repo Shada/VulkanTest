@@ -56,4 +56,6 @@ private:
 	bool checkValidationLayerSupport();
 
 	bool isDeviceSuitable(VkPhysicalDevice);
+
+	bool checkDeviceExtensionSupport(VkPhysicalDevice);
 };
