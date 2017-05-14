@@ -1,5 +1,6 @@
 #pragma once
 #include "stdafx.h"
+#include "VulkanShader.h"
 
 class HelloTriangleApplication
 {
@@ -45,7 +46,10 @@ private:
 
 	VDeleter<VkDevice> device{ vkDestroyDevice };
 
-	VDeleter<VkSurfaceKHR> surface{ instance,vkDestroySurfaceKHR };
+	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
+
+	VulkanShader vertShader;
+	VulkanShader fragShader;
 
 	void initVulkan();
 
@@ -58,6 +62,8 @@ private:
 	void pickPhysicalDevice();
 
 	void createLogicalDevice();
+
+	void createGraphicsPipeline();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 

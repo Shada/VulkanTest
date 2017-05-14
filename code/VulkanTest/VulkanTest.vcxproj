@@ -20,11 +20,13 @@
   </ItemGroup>
   <ItemGroup>
     <ClCompile Include="main.cpp" />
+    <ClCompile Include="VulkanShader.cpp" />
     <ClCompile Include="VulkanTestApplication.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="VDeleter.h" />
+    <ClInclude Include="VulkanShader.h" />
     <ClInclude Include="VulkanTestApplication.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">

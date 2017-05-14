@@ -45,6 +45,7 @@ void HelloTriangleApplication::initVulkan()
 	createLogicalDevice();
 	createSwapChain();
 	createImageViews();
+	createGraphicsPipeline();
 }
 
 void HelloTriangleApplication::pickPhysicalDevice()
@@ -157,6 +158,16 @@ void HelloTriangleApplication::createLogicalDevice()
 	vkGetDeviceQueue(device, indices.graphicsFamily, 0, &graphicsQueue);
 	vkGetDeviceQueue(device, indices.presentFamily, 0, &presentQueue);
 }
+
+void HelloTriangleApplication::createGraphicsPipeline()
+{
+	vertShader.loadShader("shaders/vert.spv");
+	fragShader.loadShader("shaders/frag.spv");
+
+	vertShader.createShaderModule(device);
+	fragShader.createShaderModule(device);
+}
+
 void HelloTriangleApplication::createImageViews()
 {
 	swapChainImageViews.resize(swapChainImages.size(), VDeleter<VkImageView>{device, vkDestroyImageView});
