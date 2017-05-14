@@ -47,6 +47,8 @@ private:
 
 	VDeleter<VkSurfaceKHR> surface{ instance,vkDestroySurfaceKHR };
 
+	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
+
 	void initVulkan();
 
 	void createInstance();
@@ -59,6 +61,8 @@ private:
 
 	void createLogicalDevice();
 
+	void createSwapChain();
+
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
 	std::vector<const char*> getRequiredExtensions();
@@ -70,4 +74,10 @@ private:
 	bool checkDeviceExtensionSupport(VkPhysicalDevice);
 
 	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice);
+
+	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
+
+	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>);
+
+	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
 };
