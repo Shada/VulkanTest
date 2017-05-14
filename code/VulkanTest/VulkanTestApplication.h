@@ -47,7 +47,11 @@ private:
 
 	VDeleter<VkSurfaceKHR> surface{ instance,vkDestroySurfaceKHR };
 
+	//swap hcain stuff
 	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
+	std::vector<VkImage> swapChainImages;
+	VkFormat swapChainImageFormat;
+	VkExtent2D swapChainExtent;
 
 	void initVulkan();
 
