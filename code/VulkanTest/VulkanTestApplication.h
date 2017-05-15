@@ -51,6 +51,8 @@ private:
 	VulkanShader vertShader;
 	VulkanShader fragShader;
 
+	VDeleter<VkPipelineLayout> pipelineLayout{ device,vkDestroyPipelineLayout };
+
 	void initVulkan();
 
 	void createInstance();
