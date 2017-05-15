@@ -38,3 +38,15 @@ void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
 		throw std::runtime_error("failed to create shader module " + filename + "!");
 	}
 }
+
+VkPipelineShaderStageCreateInfo VulkanShader::createShaderStage(ShaderType shaderType)
+{
+	VkPipelineShaderStageCreateInfo shaderStageInfo = {};
+	shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
+	shaderStageInfo.stage = (VkShaderStageFlagBits)shaderType;
+
+	shaderStageInfo.module = shaderModule;
+	shaderStageInfo.pName = "main";
+
+	return shaderStageInfo;
+}

@@ -166,6 +166,11 @@ void HelloTriangleApplication::createGraphicsPipeline()
 
 	vertShader.createShaderModule(device);
 	fragShader.createShaderModule(device);
+
+	auto vertShaderStageInfo = vertShader.createShaderStage(ShaderType::VERTEX);
+	auto fragShaderStageInfo = fragShader.createShaderStage(ShaderType::FRAGMENT);
+
+	VkPipelineShaderStageCreateInfo shaderStages[] = { vertShaderStageInfo,fragShaderStageInfo };
 }
 
 void HelloTriangleApplication::createImageViews()
