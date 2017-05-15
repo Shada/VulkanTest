@@ -55,6 +55,8 @@ private:
 
 	VDeleter<VkRenderPass> renderPass{ device,vkDestroyRenderPass };
 
+	VDeleter<VkPipeline> graphicsPipeline{ device,vkDestroyPipeline };
+
 	void initVulkan();
 
 	void createInstance();
