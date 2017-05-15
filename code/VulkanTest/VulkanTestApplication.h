@@ -53,6 +53,8 @@ private:
 
 	VDeleter<VkPipelineLayout> pipelineLayout{ device,vkDestroyPipelineLayout };
 
+	VDeleter<VkRenderPass> renderPass{ device,vkDestroyRenderPass };
+
 	void initVulkan();
 
 	void createInstance();
@@ -64,6 +66,8 @@ private:
 	void pickPhysicalDevice();
 
 	void createLogicalDevice();
+
+	void createRenderPass();
 
 	void createGraphicsPipeline();
 
