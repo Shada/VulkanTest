@@ -57,6 +57,8 @@ private:
 
 	VDeleter<VkPipeline> graphicsPipeline{ device,vkDestroyPipeline };
 
+	std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
+
 	void initVulkan();
 
 	void createInstance();
@@ -72,6 +74,8 @@ private:
 	void createRenderPass();
 
 	void createGraphicsPipeline();
+
+	void createFrameBuffers();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 

@@ -23,7 +23,7 @@ void VulkanShader::loadShader(const std::string &filename)
 
 void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
 {
-	shaderModule = VDeleter<VkShaderModule>{ device, vkDestroyShaderModule };	
+	shaderModule = VDeleter<VkShaderModule>{ device, vkDestroyShaderModule };
 
 	VkShaderModuleCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;

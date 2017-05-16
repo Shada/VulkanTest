@@ -3,10 +3,11 @@
 
 enum ShaderType
 {
-	VERTEX = VK_SHADER_STAGE_VERTEX_BIT,
-	FRAGMENT = VK_SHADER_STAGE_FRAGMENT_BIT,
-	GEOMETRY = VK_SHADER_STAGE_GEOMETRY_BIT
+	VERTEX		= VK_SHADER_STAGE_VERTEX_BIT,
+	FRAGMENT	= VK_SHADER_STAGE_FRAGMENT_BIT,
+	GEOMETRY	= VK_SHADER_STAGE_GEOMETRY_BIT
 };
+
 class VulkanShader
 {
 public:
@@ -19,9 +20,8 @@ public:
 private:
 
 	std::vector<char> buffer;
-	
+
 	std::string filename;
 
 	VDeleter<VkShaderModule> shaderModule;
 };
-
