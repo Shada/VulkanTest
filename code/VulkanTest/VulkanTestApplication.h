@@ -51,13 +51,19 @@ private:
 	VulkanShader vertShader;
 	VulkanShader fragShader;
 
-	VDeleter<VkPipelineLayout> pipelineLayout{ device,vkDestroyPipelineLayout };
+	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
 
-	VDeleter<VkRenderPass> renderPass{ device,vkDestroyRenderPass };
+	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 
-	VDeleter<VkPipeline> graphicsPipeline{ device,vkDestroyPipeline };
+	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
 
 	std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
+
+	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+
+	std::vector<VkCommandBuffer> commandBuffers;
+
+	VkViewport viewport = {};
 
 	void initVulkan();
 
@@ -76,6 +82,10 @@ private:
 	void createGraphicsPipeline();
 
 	void createFrameBuffers();
+
+	void createCommandPool();
+
+	void createCommandBuffers();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
