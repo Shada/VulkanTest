@@ -30,6 +30,8 @@ private:
 
 	void mainLoop();
 
+	void drawFrame();
+
 	// glfw stuff
 	GLFWwindow* window;
 	void initWindow();
@@ -61,6 +63,9 @@ private:
 
 	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 
+	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
+	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
+
 	std::vector<VkCommandBuffer> commandBuffers;
 
 	VkViewport viewport = {};
@@ -86,6 +91,8 @@ private:
 	void createCommandPool();
 
 	void createCommandBuffers();
+
+	void createSemaphores();
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
