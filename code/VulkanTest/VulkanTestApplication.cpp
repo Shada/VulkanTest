@@ -31,9 +31,21 @@ void HelloTriangleApplication::initWindow()
 	glfwInit();
 
 	glfwWindowHint(GLFW_CLIENT_API, GLFW_NO_API);
-	glfwWindowHint(GLFW_RESIZABLE, GLFW_FALSE);
 
 	window = glfwCreateWindow(WIDTH, HEIGHT, "Vulkan", nullptr, nullptr);
+
+	glfwSetWindowUserPointer(window, this);
+	glfwSetWindowSizeCallback(window, HelloTriangleApplication::onWindowResized);
+}
+
+void HelloTriangleApplication::onWindowResized(GLFWwindow* window, int height, int width)
+{
+	if(width == 0 | height == 0)
+	{
+		return;
+	}
+	HelloTriangleApplication*app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
+	app->recreateSwapChain();
 }
 
 void HelloTriangleApplication::initVulkan()
@@ -447,6 +459,18 @@ void HelloTriangleApplication::createSemaphores()
 	}
 }
 
+void HelloTriangleApplication::recreateSwapChain()
+{
+	vkDeviceWaitIdle(device);
+
+	createSwapChain();
+	createImageViews();
+	createRenderPass();
+	createGraphicsPipeline();
+	createFrameBuffers();
+	createCommandBuffers();
+}
+
 
 void HelloTriangleApplication::createImageViews()
 {
@@ -650,7 +674,10 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 	}
 	else
 	{
-		VkExtent2D actualExtent = { WIDTH,HEIGHT };
+		int width, height;
+		glfwGetWindowSize(window, &width, &height);
+
+		VkExtent2D actualExtent = { width, height };
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
@@ -677,7 +704,17 @@ void HelloTriangleApplication::mainLoop()
 void HelloTriangleApplication::drawFrame()
 {
 	uint32_t imageIndex;
-	vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+	VkResult result = vkAcquireNextImageKHR(device, swapChain, std::numeric_limits<uint64_t>::max(), imageAvailableSemaphore, VK_NULL_HANDLE, &imageIndex);
+
+	if(result == VK_ERROR_OUT_OF_DATE_KHR)
+	{
+		recreateSwapChain();
+		return;
+	}
+	else if(result != VK_SUCCESS && result!=VK_SUBOPTIMAL_KHR)
+	{
+		throw std::runtime_error("failed to acquire swap chain image!");
+	}
 
 	VkSubmitInfo submitInfo = {};
 	submitInfo.sType = VK_STRUCTURE_TYPE_SUBMIT_INFO;
@@ -711,8 +748,15 @@ void HelloTriangleApplication::drawFrame()
 	presentInfo.pImageIndices = &imageIndex;
 	presentInfo.pResults = nullptr;
 
-	vkQueuePresentKHR(presentQueue, &presentInfo);
-
+	result = vkQueuePresentKHR(presentQueue, &presentInfo);
+	if(result == VK_ERROR_OUT_OF_DATE_KHR || result == VK_SUBOPTIMAL_KHR)
+	{
+		recreateSwapChain();
+	}
+	else if(result != VK_SUCCESS)
+	{
+		throw std::runtime_error("failed to present swap chain image!");
+	}
 }
 
 void HelloTriangleApplication::createInstance()

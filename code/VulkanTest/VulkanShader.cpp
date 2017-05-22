@@ -23,7 +23,7 @@ void VulkanShader::loadShader(const std::string &filename)
 
 void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
 {
-	shaderModule = VDeleter<VkShaderModule>{ device, vkDestroyShaderModule };
+	shaderModule.resize(1,VDeleter<VkShaderModule>{ device, vkDestroyShaderModule });
 
 	VkShaderModuleCreateInfo createInfo = {};
 	createInfo.sType = VK_STRUCTURE_TYPE_SHADER_MODULE_CREATE_INFO;
@@ -33,7 +33,7 @@ void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
 	memcpy(codeAlligned.data(), buffer.data(), buffer.size());
 	createInfo.pCode = codeAlligned.data();
 
-	if(vkCreateShaderModule(device, &createInfo, nullptr, shaderModule.replace()) != VK_SUCCESS)
+	if(vkCreateShaderModule(device, &createInfo, nullptr, shaderModule[0].replace()) != VK_SUCCESS)
 	{
 		throw std::runtime_error("failed to create shader module " + filename + "!");
 	}
@@ -45,7 +45,7 @@ VkPipelineShaderStageCreateInfo VulkanShader::createShaderStage(ShaderType shade
 	shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
 	shaderStageInfo.stage = (VkShaderStageFlagBits)shaderType;
 
-	shaderStageInfo.module = shaderModule;
+	shaderStageInfo.module = shaderModule[0];
 	shaderStageInfo.pName = "main";
 
 	return shaderStageInfo;

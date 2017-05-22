@@ -23,5 +23,5 @@ private:
 
 	std::string filename;
 
-	VDeleter<VkShaderModule> shaderModule;
+	std::vector<VDeleter<VkShaderModule>> shaderModule;
 };

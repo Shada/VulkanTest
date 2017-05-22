@@ -23,9 +23,13 @@ private:
 		std::vector<VkPresentModeKHR> presentModes;
 	};
 
+protected:
+	static void onWindowResized(GLFWwindow* window, int height, int width);
+	
 public:
 	void run();
 
+	void recreateSwapChain();
 private:
 
 	void mainLoop();
@@ -93,6 +97,7 @@ private:
 	void createCommandBuffers();
 
 	void createSemaphores();
+
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
