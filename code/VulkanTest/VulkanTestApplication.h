@@ -72,7 +72,12 @@ private:
 
 	std::vector<VkCommandBuffer> commandBuffers;
 
+	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> vertexBufferMemory{ device,vkFreeMemory };
+
 	VkViewport viewport = {};
+
+	uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties);
 
 	void initVulkan();
 
@@ -94,10 +99,11 @@ private:
 
 	void createCommandPool();
 
+	void createVertexBuffer();
+
 	void createCommandBuffers();
 
 	void createSemaphores();
-
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
