@@ -78,6 +78,8 @@ private:
 
 	VkBuffer vertexBuffer;
 	VkDeviceMemory vertexBufferMemory;
+	VkBuffer indexBuffer;
+	VkDeviceMemory indexBufferMemory;
 
 	VkViewport viewport = {};
 
@@ -104,6 +106,8 @@ private:
 	void createCommandPool();
 
 	void createVertexBuffer();
+
+	void createIndexBuffer();
 
 	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
 
