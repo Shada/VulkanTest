@@ -30,11 +30,15 @@ public:
 	void run();
 
 	void recreateSwapChain();
+
+
 private:
 
 	void mainLoop();
 
 	void drawFrame();
+
+	void cleanUp();
 
 	// glfw stuff
 	GLFWwindow* window;
@@ -72,8 +76,8 @@ private:
 
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> vertexBufferMemory{ device,vkFreeMemory };
+	VkBuffer vertexBuffer;
+	VkDeviceMemory vertexBufferMemory;
 
 	VkViewport viewport = {};
 
@@ -100,6 +104,10 @@ private:
 	void createCommandPool();
 
 	void createVertexBuffer();
+
+	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
+
+	void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize);
 
 	void createCommandBuffers();
 
