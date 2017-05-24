@@ -40,7 +40,7 @@ void HelloTriangleApplication::initWindow()
 
 void HelloTriangleApplication::onWindowResized(GLFWwindow* window, int height, int width)
 {
-	if(width == 0 | height == 0)
+	if(width == 0 || height == 0)
 	{
 		return;
 	}
@@ -810,7 +810,7 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 		int width, height;
 		glfwGetWindowSize(window, &width, &height);
 
-		VkExtent2D actualExtent = { width, height };
+		VkExtent2D actualExtent = { (uint32_t)width, (uint32_t)height };
 
 		actualExtent.width = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
 		actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
