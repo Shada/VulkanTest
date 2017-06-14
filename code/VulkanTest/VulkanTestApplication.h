@@ -36,6 +36,8 @@ private:
 
 	void mainLoop();
 
+	void updateUniformBuffer();
+
 	void drawFrame();
 
 	void cleanUp();
@@ -61,6 +63,8 @@ private:
 	VulkanShader vertShader;
 	VulkanShader fragShader;
 
+	VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
+
 	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
 
 	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
@@ -80,6 +84,11 @@ private:
 	VkDeviceMemory vertexBufferMemory;
 	VkBuffer indexBuffer;
 	VkDeviceMemory indexBufferMemory;
+	VkBuffer uniformBuffer;
+	VkDeviceMemory uniformBufferMemory;
+	
+	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
+	VkDescriptorSet descriptorSet;
 
 	VkViewport viewport = {};
 
@@ -99,6 +108,8 @@ private:
 
 	void createRenderPass();
 
+	void createDescriptorSetLayout();
+
 	void createGraphicsPipeline();
 
 	void createFrameBuffers();
@@ -108,6 +119,12 @@ private:
 	void createVertexBuffer();
 
 	void createIndexBuffer();
+
+	void createUniformBuffer();
+
+	void createDescriptorPool();
+
+	void createDescriptorSet();
 
 	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
 

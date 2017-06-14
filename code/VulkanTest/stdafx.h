@@ -1,5 +1,6 @@
 #pragma once
 #define GLFW_INCLUDE_VULKAN
+#define GLM_FORCE_RADIANS
 
 #include <GLFW/glfw3.h>
 #include "VDeleter.h"
@@ -8,7 +9,10 @@
 #include <iostream>
 #include <array>
 
-#include <glm.hpp>
+#include <glm\glm.hpp>
+#include <glm\gtc\matrix_transform.hpp>
+
+#include <chrono>
 
 struct Vertex
 {
@@ -40,6 +44,13 @@ struct Vertex
 
 		return attributeDescriptions;
 	}
+};
+
+struct UniformBufferObject
+{
+	glm::mat4 model;
+	glm::mat4 view;
+	glm::mat4 proj;
 };
 
 const std::vector<Vertex> vertices = 
