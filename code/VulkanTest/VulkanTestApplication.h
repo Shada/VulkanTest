@@ -6,190 +6,190 @@
 class HelloTriangleApplication
 {
 private:
-	// structs
-	struct QueueFamilyIndices
-	{
-		int graphicsFamily = -1;
-		int presentFamily = -1;
-		bool isComplete()
-		{
-			return graphicsFamily >= 0 && presentFamily >= 0;
-		}
-	};
+   // structs
+   struct QueueFamilyIndices
+   {
+      int graphicsFamily = -1;
+      int presentFamily = -1;
+      bool isComplete()
+      {
+         return graphicsFamily >= 0 && presentFamily >= 0;
+      }
+   };
 
-	struct SwapChainSupportDetails
-	{
-		VkSurfaceCapabilitiesKHR capabilities;
-		std::vector<VkSurfaceFormatKHR> formats;
-		std::vector<VkPresentModeKHR> presentModes;
-	};
+   struct SwapChainSupportDetails
+   {
+      VkSurfaceCapabilitiesKHR capabilities;
+      std::vector<VkSurfaceFormatKHR> formats;
+      std::vector<VkPresentModeKHR> presentModes;
+   };
 
 protected:
-	static void onWindowResized(GLFWwindow* window, int height, int width);
-	
-public:
-	void run();
+   static void onWindowResized(GLFWwindow*, int, int);
 
-	void recreateSwapChain();
+public:
+   void run();
+
+   void recreateSwapChain();
 
 
 private:
 
-	void mainLoop();
+   void mainLoop();
 
-	void updateUniformBuffer();
+   void updateUniformBuffer();
 
-	void drawFrame();
+   void drawFrame();
 
-	// glfw stuff
-	GLFWwindow* window;
-	void initWindow();
+   // glfw stuff
+   GLFWwindow* window;
+   void initWindow();
 
-	// vulkan stuff
-	VDeleter<VkInstance> instance{ vkDestroyInstance };
+   // vulkan stuff
+   VDeleter<VkInstance> instance{ vkDestroyInstance };
 
-	VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
+   VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
 
-	VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
+   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
 
-	VkQueue graphicsQueue;
-	VkQueue presentQueue;
+   VkQueue graphicsQueue;
+   VkQueue presentQueue;
 
-	VDeleter<VkDevice> device{ vkDestroyDevice };
+   VDeleter<VkDevice> device{ vkDestroyDevice };
 
-	VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
+   VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
 
-	VulkanShader vertShader;
-	VulkanShader fragShader;
+   VulkanShader vertShader;
+   VulkanShader fragShader;
 
-	VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
+   VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
 
-	VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
+   VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
 
-	VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
+   VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
 
-	VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
+   VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
 
-	std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
+   std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
 
-	VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+   VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
 
-	VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
-	VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
+   VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
+   VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
 
-	std::vector<VkCommandBuffer> commandBuffers;
+   std::vector<VkCommandBuffer> commandBuffers;
 
-	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer};
-	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
-	VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
-	VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
-	VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
-	
-	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
-	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
-	VDeleter<VkImageView> textureImageView{device, vkDestroyImageView};
-	VDeleter<VkSampler> textureSampler{ device,vkDestroySampler };
+   VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
+   VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
+   VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
+   VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
+   VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
+   VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
 
-	VDeleter<VkImage> depthImage{ device, vkDestroyImage };
-	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
-	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
+   VDeleter<VkImage> textureImage{ device, vkDestroyImage };
+   VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
+   VDeleter<VkImageView> textureImageView{ device, vkDestroyImageView };
+   VDeleter<VkSampler> textureSampler{ device,vkDestroySampler };
 
-	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
-	VkDescriptorSet descriptorSet;
+   VDeleter<VkImage> depthImage{ device, vkDestroyImage };
+   VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
+   VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
 
-	VkViewport viewport = {};
+   VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
+   VkDescriptorSet descriptorSet;
 
-	uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties);
+   VkViewport viewport ={};
 
-	void initVulkan();
+   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties);
 
-	void createInstance();
+   void initVulkan();
 
-	void setupDebugCallback();
+   void createInstance();
 
-	void createSurface();
+   void setupDebugCallback();
 
-	void pickPhysicalDevice();
+   void createSurface();
 
-	void createLogicalDevice();
+   void pickPhysicalDevice();
 
-	void createRenderPass();
+   void createLogicalDevice();
 
-	void createDescriptorSetLayout();
+   void createRenderPass();
 
-	void createGraphicsPipeline();
+   void createDescriptorSetLayout();
 
-	void createFrameBuffers();
+   void createGraphicsPipeline();
 
-	void createCommandPool();
+   void createFrameBuffers();
 
-	void createDepthResources();
+   void createCommandPool();
 
-	void createTextureImage();
-	
-	void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
-	
-	void createTextureImageView();
+   void createDepthResources();
 
-	VkImageView createImageView(VkImage, VkFormat);
+   void createTextureImage();
 
-	void createTextureSampler();
+   void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
 
-	void createVertexBuffer();
+   void createTextureImageView();
 
-	void createIndexBuffer();
+   VkImageView createImageView(VkImage, VkFormat);
 
-	void createUniformBuffer();
+   void createTextureSampler();
 
-	void createDescriptorPool();
+   void createVertexBuffer();
 
-	void createDescriptorSet();
+   void createIndexBuffer();
 
-	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
+   void createUniformBuffer();
 
-	void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize);
+   void createDescriptorPool();
 
-	void createCommandBuffers();
+   void createDescriptorSet();
 
-	void createSemaphores();
+   void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 
-	VkCommandBuffer beginSingleTimeCommand();
+   void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize);
 
-	void endSingleTimeCommand(VkCommandBuffer);
+   void createCommandBuffers();
 
-	void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
+   void createSemaphores();
 
-	void copyBufferToImage(VkBuffer, VkImage, uint32_t, uint32_t);
+   VkCommandBuffer beginSingleTimeCommand();
 
-	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
+   void endSingleTimeCommand(VkCommandBuffer);
 
-	std::vector<const char*> getRequiredExtensions();
+   void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
 
-	bool checkValidationLayerSupport();
+   void copyBufferToImage(VkBuffer, VkImage, uint32_t, uint32_t);
 
-	bool isDeviceSuitable(VkPhysicalDevice);
+   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
-	bool checkDeviceExtensionSupport(VkPhysicalDevice);
+   std::vector<const char*> getRequiredExtensions();
 
-	//swap chain stuff
-	VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
-	std::vector<VkImage> swapChainImages;
-	VkFormat swapChainImageFormat;
-	VkExtent2D swapChainExtent;
+   bool checkValidationLayerSupport();
 
-	void createSwapChain();
+   bool isDeviceSuitable(VkPhysicalDevice);
 
-	SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice);
+   bool checkDeviceExtensionSupport(VkPhysicalDevice);
 
-	VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
+   //swap chain stuff
+   VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
+   std::vector<VkImage> swapChainImages;
+   VkFormat swapChainImageFormat;
+   VkExtent2D swapChainExtent;
 
-	VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>);
+   void createSwapChain();
 
-	VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
+   SwapChainSupportDetails querySwapChainSupport(VkPhysicalDevice);
 
-	//image views
-	std::vector<VDeleter<VkImageView>> swapChainImageViews;
+   VkSurfaceFormatKHR chooseSwapSurfaceFormat(const std::vector<VkSurfaceFormatKHR>&);
 
-	void createImageViews();
+   VkPresentModeKHR chooseSwapPresentMode(const std::vector<VkPresentModeKHR>);
+
+   VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
+
+   //image views
+   std::vector<VDeleter<VkImageView>> swapChainImageViews;
+
+   void createImageViews();
 };
