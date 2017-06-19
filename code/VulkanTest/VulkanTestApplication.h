@@ -1,6 +1,7 @@
 #pragma once
 #include "stdafx.h"
 #include "VulkanShader.h"
+#include "stb_image.h"
 
 class HelloTriangleApplication
 {
@@ -40,8 +41,6 @@ private:
 
 	void drawFrame();
 
-	void cleanUp();
-
 	// glfw stuff
 	GLFWwindow* window;
 	void initWindow();
@@ -80,13 +79,22 @@ private:
 
 	std::vector<VkCommandBuffer> commandBuffers;
 
-	VkBuffer vertexBuffer;
-	VkDeviceMemory vertexBufferMemory;
-	VkBuffer indexBuffer;
-	VkDeviceMemory indexBufferMemory;
-	VkBuffer uniformBuffer;
-	VkDeviceMemory uniformBufferMemory;
+	VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer};
+	VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
+	VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
+	VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
+	VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
 	
+	VDeleter<VkImage> textureImage{ device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
+	VDeleter<VkImageView> textureImageView{device, vkDestroyImageView};
+	VDeleter<VkSampler> textureSampler{ device,vkDestroySampler };
+
+	VDeleter<VkImage> depthImage{ device, vkDestroyImage };
+	VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
+	VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
+
 	VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
 	VkDescriptorSet descriptorSet;
 
@@ -116,6 +124,18 @@ private:
 
 	void createCommandPool();
 
+	void createDepthResources();
+
+	void createTextureImage();
+	
+	void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
+	
+	void createTextureImageView();
+
+	VkImageView createImageView(VkImage, VkFormat);
+
+	void createTextureSampler();
+
 	void createVertexBuffer();
 
 	void createIndexBuffer();
@@ -126,13 +146,21 @@ private:
 
 	void createDescriptorSet();
 
-	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer&, VkDeviceMemory&);
+	void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 
 	void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize);
 
 	void createCommandBuffers();
 
 	void createSemaphores();
+
+	VkCommandBuffer beginSingleTimeCommand();
+
+	void endSingleTimeCommand(VkCommandBuffer);
+
+	void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
+
+	void copyBufferToImage(VkBuffer, VkImage, uint32_t, uint32_t);
 
 	QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
