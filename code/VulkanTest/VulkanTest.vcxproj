@@ -111,7 +111,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>WIN32;_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN32\include;$(SolutionDir)..\externals\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN32\include;$(SolutionDir)..\externals\glm;$(SolutionDir)..\externals\tinyobjloader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -126,7 +126,7 @@
       <WarningLevel>Level3</WarningLevel>
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;$(SolutionDir)..\externals\stb;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;$(SolutionDir)..\externals\stb;%(AdditionalIncludeDirectories);$(SolutionDir)..\externals\tinyobjloader</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -143,7 +143,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>WIN32;NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN32\include;$(SolutionDir)..\externals\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN32\include;$(SolutionDir)..\externals\glm;$(SolutionDir)..\externals\tinyobjloader;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
@@ -162,7 +162,7 @@
       <FunctionLevelLinking>true</FunctionLevelLinking>
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
-      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;%(AdditionalIncludeDirectories)</AdditionalIncludeDirectories>
+      <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;C:\VulkanSDK\1.0.46.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;%(AdditionalIncludeDirectories);$(SolutionDir)..\externals\tinyobjloader</AdditionalIncludeDirectories>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

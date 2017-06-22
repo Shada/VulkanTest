@@ -132,7 +132,7 @@ private:
 
    void createTextureImageView();
 
-   VkImageView createImageView(VkImage, VkFormat);
+   VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags);
 
    void createTextureSampler();
 
@@ -153,6 +153,12 @@ private:
    void createCommandBuffers();
 
    void createSemaphores();
+
+   VkFormat findSupportedFormat(const std::vector<VkFormat>&, VkImageTiling, VkFormatFeatureFlags);
+
+   VkFormat findDepthFormat();
+
+   bool hasStencilComponent(VkFormat);
 
    VkCommandBuffer beginSingleTimeCommand();
 
