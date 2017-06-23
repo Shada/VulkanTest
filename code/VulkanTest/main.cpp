@@ -3,6 +3,7 @@
 #include <crtdbg.h> 
 
 #define STB_IMAGE_IMPLEMENTATION
+#define TINYOBJLOADER_IMPLEMENTATION
 
 #include "VulkanTestApplication.h"
 

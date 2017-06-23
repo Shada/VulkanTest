@@ -70,6 +70,7 @@ void HelloTriangleApplication::initVulkan()
    createTextureImage();
    createTextureImageView();
    createTextureSampler();
+   loadModel();
    createVertexBuffer();
    createIndexBuffer();
    createUniformBuffer();
@@ -512,7 +513,7 @@ void HelloTriangleApplication::createTextureImage()
    int texChannels;
 
    stbi_uc* pixels = stbi_load(
-      "textures/texture.jpg",
+      TEXTURE_PATH.c_str(),
       &texWidth,
       &texHeight,
       &texChannels,
@@ -667,6 +668,45 @@ void HelloTriangleApplication::createTextureSampler()
    if(vkCreateSampler(device, &samplerInfo, nullptr, textureSampler.replace()) != VK_SUCCESS)
    {
       throw std::runtime_error("Failed to create texture sampler!");
+   }
+}
+
+void HelloTriangleApplication::loadModel()
+{
+   tinyobj::attrib_t attrib;
+   std::vector<tinyobj::shape_t> shapes;
+   std::vector<tinyobj::material_t> materials;
+   std::string err;
+
+   if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
+   {
+      throw std::runtime_error(err);
+   }
+
+   for(const auto& shape : shapes)
+   {
+      for(const auto& index : shape.mesh.indices)
+      {
+         Vertex vertex ={};
+
+         vertex.position =
+         {
+            attrib.vertices[3 * index.vertex_index + 0],
+            attrib.vertices[3 * index.vertex_index + 1],
+            attrib.vertices[3 * index.vertex_index + 2]
+         };
+
+         vertex.texCoord =
+         {
+            attrib.texcoords[2 * index.texcoord_index + 0],
+            1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+         };
+
+         vertex.colour ={ 1.0f,1.0f,1.0f };
+
+         vertices.push_back(vertex);
+         indices.push_back(static_cast<uint32_t>(indices.size()));
+      }
    }
 }
 
@@ -928,7 +968,7 @@ void HelloTriangleApplication::createCommandBuffers()
       VkDeviceSize offsets[] ={ 0 };
       vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-      vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT16);
+      vkCmdBindIndexBuffer(commandBuffers[i], indexBuffer, 0, VK_INDEX_TYPE_UINT32);
 
       vkCmdDrawIndexed(commandBuffers[i], static_cast<uint32_t>(indices.size()), 1, 0, 0, 0);
 

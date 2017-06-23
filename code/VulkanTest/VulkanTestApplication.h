@@ -1,7 +1,9 @@
 #pragma once
+
 #include "stdafx.h"
 #include "VulkanShader.h"
 #include "stb_image.h"
+#include <tiny_obj_loader.h>
 
 class HelloTriangleApplication
 {
@@ -79,6 +81,8 @@ private:
 
    std::vector<VkCommandBuffer> commandBuffers;
 
+   std::vector<Vertex> vertices;
+   std::vector<uint32_t> indices;
    VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
    VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
    VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
@@ -135,6 +139,8 @@ private:
    VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags);
 
    void createTextureSampler();
+
+   void loadModel();
 
    void createVertexBuffer();
 
