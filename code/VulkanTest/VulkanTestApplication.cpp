@@ -2,6 +2,7 @@
 
 #include <set>
 #include <algorithm>
+#include <unordered_map>
 
 static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
    VkDebugReportFlagsEXT flags,
@@ -677,6 +678,7 @@ void HelloTriangleApplication::loadModel()
    std::vector<tinyobj::shape_t> shapes;
    std::vector<tinyobj::material_t> materials;
    std::string err;
+   std::unordered_map<Vertex, uint32_t>uniqueVertices ={};
 
    if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, MODEL_PATH.c_str()))
    {
@@ -704,8 +706,12 @@ void HelloTriangleApplication::loadModel()
 
          vertex.colour ={ 1.0f,1.0f,1.0f };
 
-         vertices.push_back(vertex);
-         indices.push_back(static_cast<uint32_t>(indices.size()));
+         if(uniqueVertices.count(vertex) == 0)
+         {
+            uniqueVertices[vertex] = static_cast<uint32_t>(vertices.size());
+            vertices.push_back(vertex);
+         }
+         indices.push_back(static_cast<uint32_t>(uniqueVertices[vertex]));
       }
    }
 }
@@ -1388,13 +1394,30 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 
 void HelloTriangleApplication::mainLoop()
 {
+   int frame = 0;
+   long long timediff = 0;
    while(!glfwWindowShouldClose(window))
    {
+      auto t1 = std::chrono::high_resolution_clock::now();
+
       glfwPollEvents();
 
       updateUniformBuffer();
 
       drawFrame();
+
+      auto t2 = std::chrono::high_resolution_clock::now();
+      
+
+      timediff += std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
+      frame++;
+
+      if(timediff > 1000000000)
+      {
+         std::cout << "FPS: " << frame << std::endl;
+         timediff = 0;
+         frame = 0;
+      }
    }
 
    vkDeviceWaitIdle(device);

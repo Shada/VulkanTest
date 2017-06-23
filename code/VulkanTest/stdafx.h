@@ -11,6 +11,7 @@
 
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
+#include <glm\gtx\hash.hpp>
 
 #include <chrono>
 
@@ -53,7 +54,27 @@ struct Vertex
 
       return attributeDescriptions;
    }
+
+   bool operator==(const Vertex& other) const
+   {
+      return position == other.position && 
+         texCoord == other.texCoord &&
+         colour == other.colour;
+   }
 };
+
+namespace std
+{
+   template<> struct hash<Vertex>
+   {
+      size_t operator()(Vertex const& vertex) const
+      {
+         return ((hash<glm::vec3>()(vertex.position) ^
+            (hash<glm::vec3>()(vertex.colour) << 1)) >> 1) ^
+            (hash<glm::vec2>()(vertex.texCoord) << 1);
+      }
+   };
+}
 
 struct UniformBufferObject
 {
