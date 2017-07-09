@@ -2,8 +2,10 @@
 
 #include "stdafx.h"
 #include "VulkanShader.h"
-#include "stb_image.h"
+#include <stb_image.h>
 #include <tiny_obj_loader.h>
+#include "Camera.h"
+#include "Mesh.h"
 
 class HelloTriangleApplication
 {
@@ -39,7 +41,7 @@ private:
 
    void mainLoop();
 
-   void updateUniformBuffer();
+   Camera::MatrixBufferObject* updateUniformBuffer();
 
    void drawFrame();
 
@@ -48,58 +50,47 @@ private:
    void initWindow();
 
    // vulkan stuff
-   VDeleter<VkInstance> instance{ vkDestroyInstance };
+   VulkanStuff vulkanStuff;
 
-   VDeleter<VkDebugReportCallbackEXT> callback{ instance, DestroyDebugReportCallbackEXT };
+   VDeleter<VkDebugReportCallbackEXT> callback{ vulkanStuff.instance, DestroyDebugReportCallbackEXT };
+   
+   Mesh *mesh;
 
-   VkPhysicalDevice physicalDevice = VK_NULL_HANDLE;
-
-   VkQueue graphicsQueue;
-   VkQueue presentQueue;
-
-   VDeleter<VkDevice> device{ vkDestroyDevice };
-
-   VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
-
+   // list of these, mesh needs to point at it. 
    VulkanShader vertShader;
    VulkanShader fragShader;
 
-   VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ device, vkDestroyDescriptorSetLayout };
+   VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ vulkanStuff.device, vkDestroyDescriptorSetLayout };
 
-   VDeleter<VkPipelineLayout> pipelineLayout{ device, vkDestroyPipelineLayout };
+   VDeleter<VkPipelineLayout> pipelineLayout{ vulkanStuff.device, vkDestroyPipelineLayout };
 
-   VDeleter<VkRenderPass> renderPass{ device, vkDestroyRenderPass };
+   VDeleter<VkRenderPass> renderPass{ vulkanStuff.device, vkDestroyRenderPass };
 
-   VDeleter<VkPipeline> graphicsPipeline{ device, vkDestroyPipeline };
+   VDeleter<VkPipeline> graphicsPipeline{ vulkanStuff.device, vkDestroyPipeline };
 
    std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
 
-   VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
-
-   VDeleter<VkSemaphore> imageAvailableSemaphore{ device, vkDestroySemaphore };
-   VDeleter<VkSemaphore> renderFinishedSemaphore{ device, vkDestroySemaphore };
+   
+   VDeleter<VkSemaphore> imageAvailableSemaphore{ vulkanStuff.device, vkDestroySemaphore };
+   VDeleter<VkSemaphore> renderFinishedSemaphore{ vulkanStuff.device, vkDestroySemaphore };
 
    std::vector<VkCommandBuffer> commandBuffers;
 
-   std::vector<Vertex> vertices;
-   std::vector<uint32_t> indices;
-   VDeleter<VkBuffer> vertexBuffer{ device, vkDestroyBuffer };
-   VDeleter<VkDeviceMemory> vertexBufferMemory{ device, vkFreeMemory };
-   VDeleter<VkBuffer> indexBuffer{ device, vkDestroyBuffer };
-   VDeleter<VkDeviceMemory> indexBufferMemory{ device, vkFreeMemory };
-   VDeleter<VkBuffer> uniformBuffer{ device, vkDestroyBuffer };
-   VDeleter<VkDeviceMemory> uniformBufferMemory{ device, vkFreeMemory };
+   VDeleter<VkBuffer> uniformBuffer{ vulkanStuff.device, vkDestroyBuffer };
+   VDeleter<VkDeviceMemory> uniformBufferMemory{ vulkanStuff.device, vkFreeMemory };
 
-   VDeleter<VkImage> textureImage{ device, vkDestroyImage };
-   VDeleter<VkDeviceMemory> textureImageMemory{ device, vkFreeMemory };
-   VDeleter<VkImageView> textureImageView{ device, vkDestroyImageView };
-   VDeleter<VkSampler> textureSampler{ device,vkDestroySampler };
+   Camera camera;
 
-   VDeleter<VkImage> depthImage{ device, vkDestroyImage };
-   VDeleter<VkDeviceMemory> depthImageMemory{ device, vkFreeMemory };
-   VDeleter<VkImageView> depthImageView{ device, vkDestroyImageView };
+   VDeleter<VkImage> textureImage{ vulkanStuff.device, vkDestroyImage };
+   VDeleter<VkDeviceMemory> textureImageMemory{ vulkanStuff.device, vkFreeMemory };
+   VDeleter<VkImageView> textureImageView{ vulkanStuff.device, vkDestroyImageView };
+   VDeleter<VkSampler> textureSampler{ vulkanStuff.device,vkDestroySampler };
 
-   VDeleter<VkDescriptorPool> descriptorPool{ device, vkDestroyDescriptorPool };
+   VDeleter<VkImage> depthImage{ vulkanStuff.device, vkDestroyImage };
+   VDeleter<VkDeviceMemory> depthImageMemory{ vulkanStuff.device, vkFreeMemory };
+   VDeleter<VkImageView> depthImageView{ vulkanStuff.device, vkDestroyImageView };
+
+   VDeleter<VkDescriptorPool> descriptorPool{ vulkanStuff.device, vkDestroyDescriptorPool };
    VkDescriptorSet descriptorSet;
 
    VkViewport viewport ={};
@@ -142,10 +133,6 @@ private:
 
    void loadModel();
 
-   void createVertexBuffer();
-
-   void createIndexBuffer();
-
    void createUniformBuffer();
 
    void createDescriptorPool();
@@ -185,7 +172,7 @@ private:
    bool checkDeviceExtensionSupport(VkPhysicalDevice);
 
    //swap chain stuff
-   VDeleter<VkSwapchainKHR> swapChain{ device, vkDestroySwapchainKHR };
+   VDeleter<VkSwapchainKHR> swapChain{ vulkanStuff.device, vkDestroySwapchainKHR };
    std::vector<VkImage> swapChainImages;
    VkFormat swapChainImageFormat;
    VkExtent2D swapChainExtent;

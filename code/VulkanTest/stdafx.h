@@ -18,6 +18,18 @@
 const std::string MODEL_PATH = "models/chalet.obj";
 const std::string TEXTURE_PATH = "textures/chalet.jpg";
 
+// somewhere else.. Vulkan_helper_stuff.h?
+struct VulkanStuff
+{
+   VDeleter<VkInstance> instance{ vkDestroyInstance };
+   VkPhysicalDevice physicalDevice;
+   VkQueue graphicsQueue;
+   VkQueue presentQueue;
+   VDeleter<VkDevice> device{ vkDestroyDevice };
+   VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
+   VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+};
+
 struct Vertex
 {
    glm::vec3 position;
