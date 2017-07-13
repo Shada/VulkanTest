@@ -180,6 +180,13 @@ void Mesh::setScale(glm::vec3 scale, int modelIndex)
    objectData.isChangingScale[modelIndex] = true;
 }
 
+void Mesh::setRotationSpeed(float yaw, float pitch, float roll, int index)
+{
+   objectData.rotationSpeed[index].x = yaw;
+   objectData.rotationSpeed[index].y = pitch;
+   objectData.rotationSpeed[index].z = roll;
+}
+
 void Mesh::invalidateModelMatrix(int modelIndex)
 {
    objectData.invalidModelMatrix[modelIndex] = true;
@@ -191,7 +198,9 @@ void Mesh::updateModelMatrix()
    {
       if(objectData.invalidModelMatrix[i])
       {
-         objectData.modelMatrix[i] = glm::rotate(glm::mat4(), glm::radians(objectData.rotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f)); 
+         objectData.modelMatrix[i] = glm::rotate(glm::mat4(), glm::radians(objectData.rotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f));
+         objectData.modelMatrix[i] = glm::rotate(objectData.modelMatrix[i], glm::radians(objectData.rotation[i].y), glm::vec3(0.0f, 1.0f, 0.0f));
+         objectData.modelMatrix[i] = glm::rotate(objectData.modelMatrix[i], glm::radians(objectData.rotation[i].x), glm::vec3(1.0f, 0.0f, 0.0f));
       }
    }
 }

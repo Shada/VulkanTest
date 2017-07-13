@@ -58,6 +58,11 @@ public:
       return objectData.modelMatrix[index];
    }
 
+   uint32_t getNumObjects()
+   {
+      return objectData.bufferId.size();
+   }
+
 private:
    
    void invalidateModelMatrix(int modelIndex);
@@ -84,7 +89,6 @@ private:
 
    struct ObjectData
    {
-      ;
       std::vector<size_t> bufferId;
       std::vector<glm::vec3> position;
       std::vector<glm::vec3> rotation;

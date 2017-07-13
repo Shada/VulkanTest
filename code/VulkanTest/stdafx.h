@@ -28,6 +28,9 @@ struct VulkanStuff
    VDeleter<VkDevice> device{ vkDestroyDevice };
    VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
    VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+
+   VkPhysicalDeviceProperties deviceProperties;
+   VkPhysicalDeviceFeatures deviceFeatures;
 };
 
 struct Vertex

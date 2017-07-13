@@ -7,6 +7,8 @@
 #include "Camera.h"
 #include "Mesh.h"
 
+/// TODO: Cleanup. Remove using of VDeleter. It only complicates things for now. 
+/// Not needed with proper cleanup.
 class HelloTriangleApplication
 {
 private:
@@ -36,12 +38,37 @@ public:
 
    void recreateSwapChain();
 
+   struct UboDataDynamic
+   {
+      glm::mat4 *model = nullptr;
+   } uboDataDynamic;
+
+   struct
+   {
+      glm::mat4 view;
+      glm::mat4 projection;
+   } uboVS;
+
+   struct
+   {
+      //TODO: Create Buffer class that takes care of buffers creation/memory handling etc.
+      VkBuffer cameraBuffer;
+      VkDeviceMemory cameraBufferMemory;
+      VkBuffer dynamicBuffer;
+      VkDeviceMemory dynamicBufferMemory;
+   } uniformBuffers;
+
+   // TODO: move this into the mesh/object class .
+   float animationTimer = 0.0f;
+
+   size_t dynamicAlignment;
 
 private:
 
    void mainLoop();
 
    Camera::MatrixBufferObject* updateUniformBuffer();
+   void updateDynamicUniformBuffer();
 
    void drawFrame();
 
@@ -76,8 +103,6 @@ private:
 
    std::vector<VkCommandBuffer> commandBuffers;
 
-   VDeleter<VkBuffer> uniformBuffer{ vulkanStuff.device, vkDestroyBuffer };
-   VDeleter<VkDeviceMemory> uniformBufferMemory{ vulkanStuff.device, vkFreeMemory };
 
    Camera camera;
 
