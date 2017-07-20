@@ -15,8 +15,10 @@
 
 #include <chrono>
 
-const std::string MODEL_PATH = "models/chalet.obj";
-const std::string TEXTURE_PATH = "textures/chalet.jpg";
+const std::string MODEL_PATH_CHALET = "models/chalet.obj";
+const std::string TEXTURE_PATH_CHALET = "textures/chalet.jpg";
+const std::string MODEL_PATH_STORMTROOPER = "models/stormtrooper.obj";
+const std::string TEXTURE_PATH_STORMTROOPER = "textures/stormtrooper_D.tga";
 
 // somewhere else.. Vulkan_helper_stuff.h?
 struct VulkanStuff

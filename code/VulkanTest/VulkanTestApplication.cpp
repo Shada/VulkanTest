@@ -1,4 +1,4 @@
-#include "VulkanTestApplication.h"
+﻿#include "VulkanTestApplication.h"
 #include <set>
 #include <algorithm>
 #include <unordered_map>
@@ -13,9 +13,9 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
    const char* msg,
    void* userData)
 {
-   std::cerr 
-      << "validation layer: " 
-      << msg 
+   std::cerr
+      << "validation layer: "
+      << msg
       << std::endl;
 
    return VK_FALSE;
@@ -73,7 +73,7 @@ void HelloTriangleApplication::onWindowResized(GLFWwindow* window, int height, i
    {
       return;
    }
-   
+
    HelloTriangleApplication* app = reinterpret_cast<HelloTriangleApplication*>(glfwGetWindowUserPointer(window));
    app->recreateSwapChain();
 
@@ -98,12 +98,16 @@ void HelloTriangleApplication::initVulkan()
    createCommandPool();
    createDepthResources();
    createFrameBuffers();
-   createTextureImage();
+   createTextureImage(TEXTURE_PATH_CHALET);
    createTextureImageView();
    createTextureSampler();
    loadModel();
    createUniformBuffer();
    createDescriptorPool();
+   createDescriptorSet();
+   createTextureImage(TEXTURE_PATH_STORMTROOPER);
+   createTextureImageView();
+   createTextureSampler();
    createDescriptorSet();
    createCommandBuffers();
    createSemaphores();
@@ -154,7 +158,7 @@ HelloTriangleApplication::QueueFamilyIndices HelloTriangleApplication::findQueue
    for(const auto& queueFamily : queueFamilies)
    {
       vkGetPhysicalDeviceSurfaceSupportKHR(device, i, vulkanStuff.surface, &presentSupport);
- 
+
       if(queueFamily.queueCount > 0 && queueFamily.queueFlags&VK_QUEUE_GRAPHICS_BIT)
       {
          indices.graphicsFamily = i;
@@ -224,7 +228,7 @@ void HelloTriangleApplication::createLogicalDevice()
    }
 
    vkGetDeviceQueue(vulkanStuff.device, indices.graphicsFamily, 0, &vulkanStuff.graphicsQueue);
-   vkGetDeviceQueue(vulkanStuff.device, indices.presentFamily,  0, &vulkanStuff.presentQueue);
+   vkGetDeviceQueue(vulkanStuff.device, indices.presentFamily, 0, &vulkanStuff.presentQueue);
 }
 
 void HelloTriangleApplication::createRenderPass()
@@ -311,10 +315,10 @@ void HelloTriangleApplication::createDescriptorSetLayout()
    samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
 
    std::vector<VkDescriptorSetLayoutBinding> bindings =
-   {  
+   {
       uboLayoutBinding,
       dynamicUboLayoutBinding,
-      samplerLayoutBinding 
+      samplerLayoutBinding
    };
 
    VkDescriptorSetLayoutCreateInfo layoutInfo ={};
@@ -421,7 +425,7 @@ void HelloTriangleApplication::createGraphicsPipeline()
    colorBlending.blendConstants[2] = 0.0f;
    colorBlending.blendConstants[3] = 0.0f;
 
-   VkPipelineDepthStencilStateCreateInfo depthStencil= {};
+   VkPipelineDepthStencilStateCreateInfo depthStencil={};
    depthStencil.sType                 = VK_STRUCTURE_TYPE_PIPELINE_DEPTH_STENCIL_STATE_CREATE_INFO;
    depthStencil.depthTestEnable       = VK_TRUE;
    depthStencil.depthWriteEnable      = VK_TRUE;
@@ -430,8 +434,8 @@ void HelloTriangleApplication::createGraphicsPipeline()
    depthStencil.minDepthBounds        = 0.0f;
    depthStencil.maxDepthBounds        = 1.0f;
    depthStencil.stencilTestEnable     = VK_FALSE;
-   depthStencil.front                 = {};
-   depthStencil.back                  = {};
+   depthStencil.front                 ={};
+   depthStencil.back                  ={};
 
    VkDynamicState dynamicStates[] =
    {
@@ -546,14 +550,14 @@ void HelloTriangleApplication::createDepthResources()
 
 /// TODO: couple together with the mesh. 
 /// maybe move it into the mesh class? or separate class, but mesh have an instance?
-void HelloTriangleApplication::createTextureImage()
+void HelloTriangleApplication::createTextureImage(std::string filename)
 {
    int texWidth;
    int texHeight;
    int texChannels;
 
    stbi_uc* pixels = stbi_load(
-      TEXTURE_PATH.c_str(),
+      filename.c_str(),
       &texWidth,
       &texHeight,
       &texChannels,
@@ -583,29 +587,34 @@ void HelloTriangleApplication::createTextureImage()
 
    stbi_image_free(pixels);
 
+   VkImage tempTexture;
+   VkDeviceMemory tempMemory;
    createImage(
       texWidth, texHeight,
       VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
       VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      textureImage.replace(), textureImageMemory.replace());
+      &tempTexture, &tempMemory);
 
    transitionImageLayout(
-      textureImage,
+      tempTexture,
       VK_FORMAT_R8G8B8A8_UNORM,
       VK_IMAGE_LAYOUT_PREINITIALIZED,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
 
    copyBufferToImage(
       stagingBuffer,
-      textureImage,
+      tempTexture,
       static_cast<uint32_t>(texWidth),
       static_cast<uint32_t>(texHeight));
 
    transitionImageLayout(
-      textureImage,
+      tempTexture,
       VK_FORMAT_R8G8B8A8_UNORM,
       VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
       VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
+
+   textureImage.push_back(tempTexture);
+   textureImageMemory.push_back(tempMemory);
 
    vkDestroyBuffer(vulkanStuff.device, stagingBuffer, nullptr);
    vkFreeMemory(vulkanStuff.device, stagingBufferMemory, nullptr);
@@ -653,9 +662,11 @@ void HelloTriangleApplication::createImage(
    vkBindImageMemory(vulkanStuff.device, *image, *imageMemory, 0);
 }
 
+// TODO: this should be better designed. Works a bit weird now.. Call createImageView() directly? 
+// should also be moved to somewhere else together with the texture..
 void HelloTriangleApplication::createTextureImageView()
 {
-   textureImageView = createImageView(textureImage, VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT);
+   textureImageView.push_back(createImageView(textureImage.back(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT));
 }
 
 VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
@@ -705,16 +716,19 @@ void HelloTriangleApplication::createTextureSampler()
    samplerInfo.minLod     = 0.0f;
    samplerInfo.maxLod     = 0.0f;
 
-   if(vkCreateSampler(vulkanStuff.device, &samplerInfo, nullptr, textureSampler.replace()) != VK_SUCCESS)
+   VkSampler tempSampler;
+   if(vkCreateSampler(vulkanStuff.device, &samplerInfo, nullptr, &tempSampler) != VK_SUCCESS)
    {
       throw std::runtime_error("Failed to create texture sampler!");
    }
+
+   textureSampler.push_back(tempSampler);
 }
 
 void HelloTriangleApplication::loadModel()
 {
-   mesh->loadMesh(MODEL_PATH.c_str());
-   mesh->loadMesh(MODEL_PATH.c_str());
+   mesh->loadMesh(MODEL_PATH_CHALET.c_str());
+   mesh->loadMesh(MODEL_PATH_STORMTROOPER.c_str());
 
    mesh->setPosition(glm::vec3(5.f, 5.f, 0.f), 1);
    mesh->setRotationSpeed(0.f, 20.f, 15.f, 1);
@@ -756,7 +770,7 @@ void HelloTriangleApplication::createUniformBuffer()
    // data in dynamic buffers.
    // in buffer class. have map() and unmap(). 
    // in destruction check if mapped data exists -> unpad then free memory.
-   
+
    updateDynamicUniformBuffer();
 }
 
@@ -764,11 +778,11 @@ void HelloTriangleApplication::createDescriptorPool()
 {
    std::array<VkDescriptorPoolSize, 3> poolSizes ={};
    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   poolSizes[0].descriptorCount = 1;
+   poolSizes[0].descriptorCount = 2;
    poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   poolSizes[1].descriptorCount = 1;
+   poolSizes[1].descriptorCount = 2;
    poolSizes[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   poolSizes[2].descriptorCount = 1;
+   poolSizes[2].descriptorCount = 2;
 
    VkDescriptorPoolCreateInfo poolInfo ={};
    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -784,6 +798,7 @@ void HelloTriangleApplication::createDescriptorPool()
 
 void HelloTriangleApplication::createDescriptorSet()
 {
+   VkDescriptorSet tempDescriptor;
    VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
 
    VkDescriptorSetAllocateInfo allocInfo ={};
@@ -792,7 +807,7 @@ void HelloTriangleApplication::createDescriptorSet()
    allocInfo.descriptorSetCount = 1;
    allocInfo.pSetLayouts        = layouts;
 
-   if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfo, &descriptorSet) != VK_SUCCESS)
+   if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to allocate descriptor set!");
    }
@@ -809,12 +824,12 @@ void HelloTriangleApplication::createDescriptorSet()
 
    VkDescriptorImageInfo imageSamplerInfo ={};
    imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   imageSamplerInfo.imageView   = textureImageView;
-   imageSamplerInfo.sampler     = textureSampler;
+   imageSamplerInfo.imageView   = textureImageView.back();
+   imageSamplerInfo.sampler     = textureSampler.back();
 
    std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
    descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[0].dstSet           = descriptorSet;
+   descriptorWrites[0].dstSet           = tempDescriptor;
    descriptorWrites[0].dstBinding       = 0;
    descriptorWrites[0].dstArrayElement  = 0;
    descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
@@ -824,7 +839,7 @@ void HelloTriangleApplication::createDescriptorSet()
    descriptorWrites[0].pTexelBufferView = nullptr;
 
    descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[1].dstSet           = descriptorSet;
+   descriptorWrites[1].dstSet           = tempDescriptor;
    descriptorWrites[1].dstBinding       = 1;
    descriptorWrites[1].dstArrayElement  = 0;
    descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
@@ -834,7 +849,7 @@ void HelloTriangleApplication::createDescriptorSet()
    descriptorWrites[1].pTexelBufferView = nullptr;
 
    descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[2].dstSet           = descriptorSet;
+   descriptorWrites[2].dstSet           = tempDescriptor;
    descriptorWrites[2].dstBinding       = 2;
    descriptorWrites[2].dstArrayElement  = 0;
    descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
@@ -844,6 +859,8 @@ void HelloTriangleApplication::createDescriptorSet()
    descriptorWrites[2].pTexelBufferView = nullptr;
 
    vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+
+   descriptorSet.push_back(tempDescriptor);
 }
 
 void HelloTriangleApplication::createBuffer(
@@ -925,26 +942,26 @@ void HelloTriangleApplication::createCommandBuffers()
       throw std::runtime_error("failed to create command buffers!");
    }
 
-      VkCommandBufferBeginInfo beginInfo ={};
-      beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
-      beginInfo.pInheritanceInfo = nullptr;
+   VkCommandBufferBeginInfo beginInfo ={};
+   beginInfo.sType            = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
+   beginInfo.flags            = VK_COMMAND_BUFFER_USAGE_SIMULTANEOUS_USE_BIT;
+   beginInfo.pInheritanceInfo = nullptr;
 
-      std::array<VkClearValue, 2> clearValues ={};
-      clearValues[0].color ={ 0.0f, 0.0f, 0.0f, 0.0f };
-      clearValues[1].depthStencil ={ 1.0f, 0 };
+   std::array<VkClearValue, 2> clearValues ={};
+   clearValues[0].color ={ 0.0f, 0.0f, 0.0f, 0.0f };
+   clearValues[1].depthStencil ={ 1.0f, 0 };
 
-      VkRenderPassBeginInfo renderPassBeginInfo ={};
-      renderPassBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
-      renderPassBeginInfo.renderPass        = renderPass;
-      renderPassBeginInfo.renderArea.offset ={ 0,0 };
-      renderPassBeginInfo.renderArea.extent = swapChainExtent;
-      renderPassBeginInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
-      renderPassBeginInfo.pClearValues      = clearValues.data();
+   VkRenderPassBeginInfo renderPassBeginInfo ={};
+   renderPassBeginInfo.sType             = VK_STRUCTURE_TYPE_RENDER_PASS_BEGIN_INFO;
+   renderPassBeginInfo.renderPass        = renderPass;
+   renderPassBeginInfo.renderArea.offset ={ 0,0 };
+   renderPassBeginInfo.renderArea.extent = swapChainExtent;
+   renderPassBeginInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
+   renderPassBeginInfo.pClearValues      = clearValues.data();
 
    for(size_t i = 0; i < commandBuffers.size(); i++)
    {
-      renderPassBeginInfo.framebuffer       = swapChainFrameBuffers[i];
+      renderPassBeginInfo.framebuffer = swapChainFrameBuffers[i];
 
       if(vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS)
       {
@@ -952,7 +969,7 @@ void HelloTriangleApplication::createCommandBuffers()
       }
 
       vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
-      
+
       vkCmdSetViewport(commandBuffers[i], 0, 1, &viewport);
 
       vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
@@ -968,7 +985,7 @@ void HelloTriangleApplication::createCommandBuffers()
 
          uint32_t dynamicOffset = j * static_cast<uint32_t>(dynamicAlignment);
 
-         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet, 1, &dynamicOffset);
+         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[j], 1, &dynamicOffset);
 
          vkCmdDrawIndexed(commandBuffers[i], mesh->getNumIndices(j), 1, 0, 0, 0);
       }
@@ -1019,7 +1036,7 @@ VkFormat HelloTriangleApplication::findSupportedFormat(const std::vector<VkForma
 VkFormat HelloTriangleApplication::findDepthFormat()
 {
    return findSupportedFormat(
-      { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
+   { VK_FORMAT_D32_SFLOAT, VK_FORMAT_D32_SFLOAT_S8_UINT, VK_FORMAT_D24_UNORM_S8_UINT },
       VK_IMAGE_TILING_OPTIMAL,
       VK_FORMAT_FEATURE_DEPTH_STENCIL_ATTACHMENT_BIT
    );
@@ -1096,25 +1113,25 @@ void HelloTriangleApplication::transitionImageLayout(VkImage image, VkFormat for
       barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
    }
 
-   if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED 
+   if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED
       && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
    {
       barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
       barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
    }
-   else if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED && 
+   else if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED &&
       newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
    {
       barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
       barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
    }
-   else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL && 
+   else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
       newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
    {
       barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
       barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
    }
-   else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED && 
+   else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
       newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
    {
       barrier.srcAccessMask = 0;
@@ -1348,7 +1365,7 @@ VkSurfaceFormatKHR HelloTriangleApplication::chooseSwapSurfaceFormat(const std::
 VkPresentModeKHR HelloTriangleApplication::chooseSwapPresentMode(const std::vector<VkPresentModeKHR> availablePresentModes)
 {
    VkPresentModeKHR bestMode = VK_PRESENT_MODE_FIFO_KHR;
- 
+
    for(const auto& availablePresentMode : availablePresentModes)
    {
       if(availablePresentMode == VK_PRESENT_MODE_MAILBOX_KHR)
@@ -1377,7 +1394,7 @@ VkExtent2D HelloTriangleApplication::chooseSwapExtent(const VkSurfaceCapabilitie
 
       VkExtent2D actualExtent ={ (uint32_t)width, (uint32_t)height };
 
-      actualExtent.width  = std::max(capabilities.minImageExtent.width,  std::min(capabilities.maxImageExtent.width,  actualExtent.width));
+      actualExtent.width  = std::max(capabilities.minImageExtent.width, std::min(capabilities.maxImageExtent.width, actualExtent.width));
       actualExtent.height = std::max(capabilities.minImageExtent.height, std::min(capabilities.maxImageExtent.height, actualExtent.height));
 
       return actualExtent;
@@ -1403,7 +1420,7 @@ void HelloTriangleApplication::mainLoop()
       drawFrame();
 
       auto t2 = std::chrono::high_resolution_clock::now();
-      
+
       dt = std::chrono::duration_cast<std::chrono::nanoseconds>(t2 - t1).count();
       timediff += dt;
       frame++;
@@ -1426,8 +1443,8 @@ void HelloTriangleApplication::mainLoop()
 Camera::MatrixBufferObject* HelloTriangleApplication::updateUniformBuffer()
 {
    // TODO: change this stuff, it's weird
-   
-   
+
+
    camera.rotate(); // TODO: Should only bew camera->update(), and not called in this method.
 
    Camera::MatrixBufferObject *mbo = &camera.getCameraData();
@@ -1603,7 +1620,7 @@ std::vector<const char*> HelloTriangleApplication::getRequiredExtensions()
    std::vector<const char*> extensions;
 
    unsigned int glfwExtensionCount = 0;
- 
+
    const char** glfwExtensions;
 
    glfwExtensions = glfwGetRequiredInstanceExtensions(&glfwExtensionCount);
@@ -1648,4 +1665,5 @@ bool HelloTriangleApplication::checkValidationLayerSupport()
       }
    }
    return true;
+
 }

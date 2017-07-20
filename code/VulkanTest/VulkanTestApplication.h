@@ -106,17 +106,20 @@ private:
 
    Camera camera;
 
-   VDeleter<VkImage> textureImage{ vulkanStuff.device, vkDestroyImage };
-   VDeleter<VkDeviceMemory> textureImageMemory{ vulkanStuff.device, vkFreeMemory };
-   VDeleter<VkImageView> textureImageView{ vulkanStuff.device, vkDestroyImageView };
-   VDeleter<VkSampler> textureSampler{ vulkanStuff.device,vkDestroySampler };
+   // have to be careful so that we couple these together correctly.
+   // safest bet is to have vector of a Texture struct containing one of each of these that represent a texture.
+   // maybe even a texture class that a mesh or mesh/texture-coupler can point to with an ID. 
+   std::vector<VkImage> textureImage;
+   std::vector<VkDeviceMemory> textureImageMemory;
+   std::vector<VkImageView> textureImageView;
+   std::vector<VkSampler> textureSampler;
 
    VDeleter<VkImage> depthImage{ vulkanStuff.device, vkDestroyImage };
    VDeleter<VkDeviceMemory> depthImageMemory{ vulkanStuff.device, vkFreeMemory };
    VDeleter<VkImageView> depthImageView{ vulkanStuff.device, vkDestroyImageView };
 
    VDeleter<VkDescriptorPool> descriptorPool{ vulkanStuff.device, vkDestroyDescriptorPool };
-   VkDescriptorSet descriptorSet;
+   std::vector<VkDescriptorSet> descriptorSet; // TODO: This should be moved to a mesh class or something like that.
 
    VkViewport viewport ={};
 
@@ -146,7 +149,7 @@ private:
 
    void createDepthResources();
 
-   void createTextureImage();
+   void createTextureImage(std::string filename);
 
    void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
 
