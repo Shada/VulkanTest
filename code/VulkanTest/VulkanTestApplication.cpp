@@ -49,6 +49,11 @@ void HelloTriangleApplication::run()
    initVulkan();
    mainLoop();
 
+   glfwDestroyWindow(window);
+   glfwTerminate();
+
+   cleanUp();
+
    delete mesh;
    mesh = nullptr;
 }
@@ -748,7 +753,7 @@ void HelloTriangleApplication::createUniformBuffer()
       &uniformBuffers.cameraBufferMemory);
 
    // model matrices (dynamic buffer)
-   size_t uboAlignment = vulkanStuff.deviceProperties.limits.minUniformBufferOffsetAlignment;
+   size_t uboAlignment = (size_t)vulkanStuff.deviceProperties.limits.minUniformBufferOffsetAlignment;
    dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
 
    bufferSize = mesh->getNumObjects() * dynamicAlignment;
@@ -1205,6 +1210,24 @@ void HelloTriangleApplication::createImageViews()
    }
 }
 
+void HelloTriangleApplication::cleanUp()
+{
+   vkFreeMemory(vulkanStuff.device, uniformBuffers.cameraBufferMemory, nullptr);
+   vkDestroyBuffer(vulkanStuff.device, uniformBuffers.cameraBuffer, nullptr);
+
+   vkFreeMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory, nullptr);
+   vkDestroyBuffer(vulkanStuff.device, uniformBuffers.dynamicBuffer, nullptr);
+
+   for(size_t i = 0; i < textureImage.size(); i++)
+   {
+      vkFreeMemory(vulkanStuff.device, textureImageMemory.at(i), nullptr);
+      vkDestroyImage(vulkanStuff.device, textureImage.at(i), nullptr);
+      vkDestroyImageView(vulkanStuff.device, textureImageView.at(i), nullptr);
+      vkDestroySampler(vulkanStuff.device, textureSampler.at(i), nullptr);
+   }
+
+}
+
 void HelloTriangleApplication::createSwapChain()
 {
    SwapChainSupportDetails swapChainSupport = querySwapChainSupport(vulkanStuff.physicalDevice);
@@ -1434,16 +1457,11 @@ void HelloTriangleApplication::mainLoop()
    }
 
    vkDeviceWaitIdle(vulkanStuff.device);
-
-   glfwDestroyWindow(window);
-
-   glfwTerminate();
 }
 
-Camera::MatrixBufferObject* HelloTriangleApplication::updateUniformBuffer()
+void HelloTriangleApplication::updateUniformBuffer()
 {
    // TODO: change this stuff, it's weird
-
 
    camera.rotate(); // TODO: Should only bew camera->update(), and not called in this method.
 
@@ -1457,7 +1475,6 @@ Camera::MatrixBufferObject* HelloTriangleApplication::updateUniformBuffer()
    memcpy(data, &uboVS, sizeof(uboVS));
    vkUnmapMemory(vulkanStuff.device, uniformBuffers.cameraBufferMemory);
 
-   return mbo;
 }
 
 void HelloTriangleApplication::updateDynamicUniformBuffer()

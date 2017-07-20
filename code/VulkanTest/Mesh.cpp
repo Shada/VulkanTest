@@ -142,7 +142,7 @@ int Mesh::addInstance(int meshId)
 }
 void Mesh::update(float dt)
 {
-   for(int i=0;i<objectData.position.size();i++)
+   for(size_t i = 0; i < objectData.position.size(); i++)
    {
       if(objectData.movingSpeed[i] != 0.f)
       {
@@ -150,7 +150,7 @@ void Mesh::update(float dt)
          invalidateModelMatrix(i);
       }
    }
-   for(int i=0; i<objectData.rotation.size(); i++)
+   for(size_t i = 0; i < objectData.rotation.size(); i++)
    {
       if(objectData.rotationSpeed[i] != glm::vec3(0.f))
       {
@@ -187,14 +187,14 @@ void Mesh::setRotationSpeed(float yaw, float pitch, float roll, int index)
    objectData.rotationSpeed[index].z = roll;
 }
 
-void Mesh::invalidateModelMatrix(int modelIndex)
+void Mesh::invalidateModelMatrix(size_t modelIndex)
 {
    objectData.invalidModelMatrix[modelIndex] = true;
 }
 
 void Mesh::updateModelMatrix()
 {
-   for(int i=0;i<objectData.modelMatrix.size();i++)
+   for(size_t i = 0; i < objectData.modelMatrix.size(); i++)
    {
       if(objectData.invalidModelMatrix[i])
       {

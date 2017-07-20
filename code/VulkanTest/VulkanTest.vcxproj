@@ -60,6 +60,7 @@
     <UseDebugLibraries>true</UseDebugLibraries>
     <PlatformToolset>v141</PlatformToolset>
     <CharacterSet>Unicode</CharacterSet>
+    <UseOfMfc>false</UseOfMfc>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'" Label="Configuration">
     <ConfigurationType>Application</ConfigurationType>
@@ -97,6 +98,7 @@
     <OutDir>$(SolutionDir)..\bin\$(Platform)\</OutDir>
     <IntDir>$(SolutionDir)..\obj\$(Platform)\$(Configuration)\</IntDir>
     <TargetName>$(ProjectName)D</TargetName>
+    <EnableCppCoreCheck>false</EnableCppCoreCheck>
   </PropertyGroup>
   <PropertyGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
     <LinkIncremental>false</LinkIncremental>
@@ -131,11 +133,14 @@
       <Optimization>Disabled</Optimization>
       <PreprocessorDefinitions>_DEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>C:\VulkanSDK\1.0.51.0\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;$(SolutionDir)..\externals\stb;%(AdditionalIncludeDirectories);$(SolutionDir)..\externals\tinyobjloader</AdditionalIncludeDirectories>
+      <CompileAsManaged>
+      </CompileAsManaged>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>
       <AdditionalLibraryDirectories>$(VULKAN_SDK)\Lib;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\lib-vc2017;%(AdditionalLibraryDirectories)</AdditionalLibraryDirectories>
       <AdditionalDependencies>vulkan-1.lib;glfw3.lib;%(AdditionalDependencies)</AdditionalDependencies>
+      <AdditionalOptions> %(AdditionalOptions)</AdditionalOptions>
     </Link>
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|Win32'">
@@ -159,7 +164,7 @@
   </ItemDefinitionGroup>
   <ItemDefinitionGroup Condition="'$(Configuration)|$(Platform)'=='Release|x64'">
     <ClCompile>
-      <WarningLevel>Level3</WarningLevel>
+      <WarningLevel>EnableAllWarnings</WarningLevel>
       <PrecompiledHeader>
       </PrecompiledHeader>
       <Optimization>MaxSpeed</Optimization>
@@ -167,6 +172,7 @@
       <IntrinsicFunctions>true</IntrinsicFunctions>
       <PreprocessorDefinitions>NDEBUG;_CONSOLE;%(PreprocessorDefinitions)</PreprocessorDefinitions>
       <AdditionalIncludeDirectories>$(SolutionDir)..\externals\stb;$(VULKAN_SDK)\Include;$(SolutionDir)..\externals\glfw-3.2.1.bin.WIN64\include;$(SolutionDir)..\externals\glm;%(AdditionalIncludeDirectories);$(SolutionDir)..\externals\tinyobjloader</AdditionalIncludeDirectories>
+      <LanguageStandard>stdcpp14</LanguageStandard>
     </ClCompile>
     <Link>
       <SubSystem>Console</SubSystem>

@@ -36,8 +36,8 @@ void Camera::rotate()
 
 void Camera::setWindowSize(int width, int height)
 {
-   windowSize.x = width;
-   windowSize.y = height;
+   windowSize.x = (float)width;
+   windowSize.y = (float)height;
 }
 
 Camera::~Camera()

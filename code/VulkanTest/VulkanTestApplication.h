@@ -67,7 +67,7 @@ private:
 
    void mainLoop();
 
-   Camera::MatrixBufferObject* updateUniformBuffer();
+   void updateUniformBuffer();
    void updateDynamicUniformBuffer();
 
    void drawFrame();
@@ -219,4 +219,8 @@ private:
    std::vector<VDeleter<VkImageView>> swapChainImageViews;
 
    void createImageViews();
+
+
+   // cleanup of vulkan stuff
+   void cleanUp();
 };

@@ -60,12 +60,12 @@ public:
 
    uint32_t getNumObjects()
    {
-      return objectData.bufferId.size();
+      return static_cast<uint32_t>(objectData.bufferId.size());
    }
 
 private:
    
-   void invalidateModelMatrix(int modelIndex);
+   void invalidateModelMatrix(size_t modelIndex);
    void updateModelMatrix();
 
    void createVertexBuffer();
