@@ -90,6 +90,8 @@ void HelloTriangleApplication::initVulkan()
    // this should be somewhere esle, like initApplication, initGame, or something like that..
    mesh = new Mesh(&vulkanStuff);
 
+   texture = new Texture(&vulkanStuff);
+
    createInstance();
    setupDebugCallback();
    createSurface();
@@ -103,17 +105,13 @@ void HelloTriangleApplication::initVulkan()
    createCommandPool();
    createDepthResources();
    createFrameBuffers();
-   createTextureImage(TEXTURE_PATH_CHALET);
-   createTextureImageView();
-   createTextureSampler();
+   int textureIndex = createTextureImage(TEXTURE_PATH_CHALET);
    loadModel();
    createUniformBuffer();
    createDescriptorPool();
-   createDescriptorSet();
-   createTextureImage(TEXTURE_PATH_STORMTROOPER);
-   createTextureImageView();
-   createTextureSampler();
-   createDescriptorSet();
+   createDescriptorSet(textureIndex);
+   textureIndex = createTextureImage(TEXTURE_PATH_STORMTROOPER);
+   createDescriptorSet(textureIndex);
    createCommandBuffers();
    createSemaphores();
 }
@@ -555,74 +553,14 @@ void HelloTriangleApplication::createDepthResources()
 
 /// TODO: couple together with the mesh. 
 /// maybe move it into the mesh class? or separate class, but mesh have an instance?
-void HelloTriangleApplication::createTextureImage(std::string filename)
+int HelloTriangleApplication::createTextureImage(std::string filename)
 {
-   int texWidth;
-   int texHeight;
-   int texChannels;
-
-   stbi_uc* pixels = stbi_load(
-      filename.c_str(),
-      &texWidth,
-      &texHeight,
-      &texChannels,
-      STBI_rgb_alpha);
-
-   VkDeviceSize imageSize = texWidth * texHeight * 4;
-
-   if(!pixels)
+   int textureIndex = texture->loadTexture(filename);
+   if(textureIndex == -1)
    {
       throw std::runtime_error("failed to load texture image!");
    }
-
-   VkBuffer stagingBuffer;
-   VkDeviceMemory stagingBufferMemory;
-
-   createBuffer(
-      imageSize,
-      VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
-      &stagingBuffer,
-      &stagingBufferMemory);
-
-   void *data;
-   vkMapMemory(vulkanStuff.device, stagingBufferMemory, 0, imageSize, 0, &data);
-   memcpy(data, pixels, static_cast<size_t>(imageSize));
-   vkUnmapMemory(vulkanStuff.device, stagingBufferMemory);
-
-   stbi_image_free(pixels);
-
-   VkImage tempTexture;
-   VkDeviceMemory tempMemory;
-   createImage(
-      texWidth, texHeight,
-      VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_TILING_OPTIMAL,
-      VK_IMAGE_USAGE_TRANSFER_DST_BIT | VK_IMAGE_USAGE_SAMPLED_BIT, VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      &tempTexture, &tempMemory);
-
-   transitionImageLayout(
-      tempTexture,
-      VK_FORMAT_R8G8B8A8_UNORM,
-      VK_IMAGE_LAYOUT_PREINITIALIZED,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL);
-
-   copyBufferToImage(
-      stagingBuffer,
-      tempTexture,
-      static_cast<uint32_t>(texWidth),
-      static_cast<uint32_t>(texHeight));
-
-   transitionImageLayout(
-      tempTexture,
-      VK_FORMAT_R8G8B8A8_UNORM,
-      VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL,
-      VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL);
-
-   textureImage.push_back(tempTexture);
-   textureImageMemory.push_back(tempMemory);
-
-   vkDestroyBuffer(vulkanStuff.device, stagingBuffer, nullptr);
-   vkFreeMemory(vulkanStuff.device, stagingBufferMemory, nullptr);
+   return textureIndex;
 }
 
 void HelloTriangleApplication::createImage(
@@ -667,13 +605,6 @@ void HelloTriangleApplication::createImage(
    vkBindImageMemory(vulkanStuff.device, *image, *imageMemory, 0);
 }
 
-// TODO: this should be better designed. Works a bit weird now.. Call createImageView() directly? 
-// should also be moved to somewhere else together with the texture..
-void HelloTriangleApplication::createTextureImageView()
-{
-   textureImageView.push_back(createImageView(textureImage.back(), VK_FORMAT_R8G8B8A8_UNORM, VK_IMAGE_ASPECT_COLOR_BIT));
-}
-
 VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat format, VkImageAspectFlags aspectFlags)
 {
    VkImageView imageView;
@@ -695,39 +626,6 @@ VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat fo
    }
 
    return imageView;
-}
-
-void HelloTriangleApplication::createTextureSampler()
-{
-   VkSamplerCreateInfo samplerInfo ={};
-   samplerInfo.sType     = VK_STRUCTURE_TYPE_SAMPLER_CREATE_INFO;
-   samplerInfo.magFilter = VK_FILTER_LINEAR;
-   samplerInfo.minFilter = VK_FILTER_LINEAR;
-
-   samplerInfo.addressModeU = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-   samplerInfo.addressModeV = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-   samplerInfo.addressModeW = VK_SAMPLER_ADDRESS_MODE_REPEAT;
-
-   samplerInfo.anisotropyEnable = VK_TRUE;
-   samplerInfo.maxAnisotropy    = 16;
-   samplerInfo.borderColor      = VK_BORDER_COLOR_INT_OPAQUE_BLACK;
-
-   samplerInfo.unnormalizedCoordinates = VK_FALSE;
-   samplerInfo.compareEnable           = VK_FALSE;
-   samplerInfo.compareOp               = VK_COMPARE_OP_ALWAYS;
-
-   samplerInfo.mipmapMode = VK_SAMPLER_MIPMAP_MODE_LINEAR;
-   samplerInfo.mipLodBias = 0.0f;
-   samplerInfo.minLod     = 0.0f;
-   samplerInfo.maxLod     = 0.0f;
-
-   VkSampler tempSampler;
-   if(vkCreateSampler(vulkanStuff.device, &samplerInfo, nullptr, &tempSampler) != VK_SUCCESS)
-   {
-      throw std::runtime_error("Failed to create texture sampler!");
-   }
-
-   textureSampler.push_back(tempSampler);
 }
 
 void HelloTriangleApplication::loadModel()
@@ -801,7 +699,8 @@ void HelloTriangleApplication::createDescriptorPool()
    }
 }
 
-void HelloTriangleApplication::createDescriptorSet()
+// TODO: This should be moved in together with the Mesh/object. I think.. The only issue is the camera buffer.. But I can probably have a pointer in there somehow. Since I still need to do collision detection.
+void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 {
    VkDescriptorSet tempDescriptor;
    VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
@@ -829,8 +728,8 @@ void HelloTriangleApplication::createDescriptorSet()
 
    VkDescriptorImageInfo imageSamplerInfo ={};
    imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   imageSamplerInfo.imageView   = textureImageView.back();
-   imageSamplerInfo.sampler     = textureSampler.back();
+   imageSamplerInfo.imageView   = texture->getImageView(textureIndex);;
+   imageSamplerInfo.sampler     = texture->getSampler(textureIndex);
 
    std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
    descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
@@ -1218,14 +1117,8 @@ void HelloTriangleApplication::cleanUp()
    vkFreeMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory, nullptr);
    vkDestroyBuffer(vulkanStuff.device, uniformBuffers.dynamicBuffer, nullptr);
 
-   for(size_t i = 0; i < textureImage.size(); i++)
-   {
-      vkFreeMemory(vulkanStuff.device, textureImageMemory.at(i), nullptr);
-      vkDestroyImage(vulkanStuff.device, textureImage.at(i), nullptr);
-      vkDestroyImageView(vulkanStuff.device, textureImageView.at(i), nullptr);
-      vkDestroySampler(vulkanStuff.device, textureSampler.at(i), nullptr);
-   }
-
+   delete texture;
+   texture = nullptr;
 }
 
 void HelloTriangleApplication::createSwapChain()

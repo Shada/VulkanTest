@@ -22,6 +22,7 @@
     <ClCompile Include="Camera.cpp" />
     <ClCompile Include="main.cpp" />
     <ClCompile Include="Mesh.cpp" />
+    <ClCompile Include="Texture.cpp" />
     <ClCompile Include="VulkanShader.cpp" />
     <ClCompile Include="VulkanTestApplication.cpp" />
   </ItemGroup>
@@ -29,6 +30,7 @@
     <ClInclude Include="Camera.h" />
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="stdafx.h" />
+    <ClInclude Include="Texture.h" />
     <ClInclude Include="VDeleter.h" />
     <ClInclude Include="VulkanShader.h" />
     <ClInclude Include="VulkanTestApplication.h" />

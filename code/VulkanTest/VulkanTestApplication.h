@@ -2,10 +2,10 @@
 
 #include "stdafx.h"
 #include "VulkanShader.h"
-#include <stb_image.h>
 #include <tiny_obj_loader.h>
 #include "Camera.h"
 #include "Mesh.h"
+#include "Texture.h"
 
 /// TODO: Cleanup. Remove using of VDeleter. It only complicates things for now. 
 /// Not needed with proper cleanup.
@@ -81,7 +81,9 @@ private:
 
    VDeleter<VkDebugReportCallbackEXT> callback{ vulkanStuff.instance, DestroyDebugReportCallbackEXT };
    
+   // ´todo: move texture to the mesh?
    Mesh *mesh;
+   Texture *texture;
 
    // list of these, mesh needs to point at it. 
    VulkanShader vertShader;
@@ -103,16 +105,7 @@ private:
 
    std::vector<VkCommandBuffer> commandBuffers;
 
-
    Camera camera;
-
-   // have to be careful so that we couple these together correctly.
-   // safest bet is to have vector of a Texture struct containing one of each of these that represent a texture.
-   // maybe even a texture class that a mesh or mesh/texture-coupler can point to with an ID. 
-   std::vector<VkImage> textureImage;
-   std::vector<VkDeviceMemory> textureImageMemory;
-   std::vector<VkImageView> textureImageView;
-   std::vector<VkSampler> textureSampler;
 
    VDeleter<VkImage> depthImage{ vulkanStuff.device, vkDestroyImage };
    VDeleter<VkDeviceMemory> depthImageMemory{ vulkanStuff.device, vkFreeMemory };
@@ -149,15 +142,13 @@ private:
 
    void createDepthResources();
 
-   void createTextureImage(std::string filename);
+   int createTextureImage(std::string filename);
 
+   // These two are used for depth resource and swapchain. So I should probably make them helper functions, so I can use them from texture as well. 
+   // or make them accessible from texture by changing the architecture.
    void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
 
-   void createTextureImageView();
-
    VkImageView createImageView(VkImage, VkFormat, VkImageAspectFlags);
-
-   void createTextureSampler();
 
    void loadModel();
 
@@ -165,7 +156,7 @@ private:
 
    void createDescriptorPool();
 
-   void createDescriptorSet();
+   void createDescriptorSet(int textureIndex);
 
    void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 
