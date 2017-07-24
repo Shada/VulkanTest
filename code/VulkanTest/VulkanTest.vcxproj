@@ -25,6 +25,7 @@
     <ClCompile Include="Texture.cpp" />
     <ClCompile Include="VulkanShader.cpp" />
     <ClCompile Include="VulkanTestApplication.cpp" />
+    <ClCompile Include="WorldObject.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
@@ -34,6 +35,7 @@
     <ClInclude Include="VDeleter.h" />
     <ClInclude Include="VulkanShader.h" />
     <ClInclude Include="VulkanTestApplication.h" />
+    <ClInclude Include="WorldObject.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

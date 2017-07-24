@@ -6,6 +6,7 @@
 #include "Camera.h"
 #include "Mesh.h"
 #include "Texture.h"
+#include "WorldObject.h"
 
 /// TODO: Cleanup. Remove using of VDeleter. It only complicates things for now. 
 /// Not needed with proper cleanup.
@@ -81,9 +82,10 @@ private:
 
    VDeleter<VkDebugReportCallbackEXT> callback{ vulkanStuff.instance, DestroyDebugReportCallbackEXT };
    
-   // ´todo: move texture to the mesh?
+   // TODO: move texture to the mesh?
    Mesh *mesh;
    Texture *texture;
+   WorldObject object;
 
    // list of these, mesh needs to point at it. 
    VulkanShader vertShader;

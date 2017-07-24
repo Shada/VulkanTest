@@ -1,5 +1,8 @@
 #include "Mesh.h"
 
+#include <tiny_obj_loader.h>
+#include <unordered_map>
+
 Mesh::Mesh(const VulkanStuff* vulkanStuff)
 {
    this->vulkanStuff = vulkanStuff;
@@ -26,9 +29,7 @@ Mesh::~Mesh()
    vulkanStuff = nullptr;
 }
 
-#include <tiny_obj_loader.h>
-#include <unordered_map>
-
+// TODO: might want to try and make this look better.
 void Mesh::loadMesh(const char* fileNames)
 {
    VertexData tVertexData;
@@ -48,31 +49,18 @@ void Mesh::loadMesh(const char* fileNames)
    {
       for(const auto& index : shape.mesh.indices)
       {
-         Vertex vertex ={};
-
-         vertex.position =
-         {
-            attrib.vertices[3 * index.vertex_index + 0],
-            attrib.vertices[3 * index.vertex_index + 1],
-            attrib.vertices[3 * index.vertex_index + 2]
-         };
-
-         vertex.texCoord =
-         {
-            attrib.texcoords[2 * index.texcoord_index + 0],
-            1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-         };
-
-         vertex.colour ={ 1.0f,1.0f,1.0f };
+         Vertex vertex = extractVertexFromAttrib(attrib, index);
 
          if(uniqueVertices.count(vertex) == 0)
          {
             uniqueVertices[vertex] = static_cast<uint32_t>(tVertexData.vertices.size());
             tVertexData.vertices.push_back(vertex);
          }
+
          tVertexData.indices.push_back(static_cast<uint32_t>(uniqueVertices[vertex]));
       }
    }
+
    vertexData.push_back(tVertexData);
 
    createVertexBuffer();
@@ -80,23 +68,29 @@ void Mesh::loadMesh(const char* fileNames)
 
    modelName.push_back(fileNames);
 
-   objectData.bufferId.push_back(vertexBuffer.size() - 1);
+   objectData.bufferId.push_back(vertexBuffer.size() - 1);   
+}
 
-   // set default pos/rot/scale etc
-   objectData.position.push_back(glm::vec3(0, 0, 0));
-   objectData.rotation.push_back(glm::vec3(0, 0, 0));
-   objectData.scale.push_back(glm::vec3(0, 0, 0));
-   objectData.rotationSpeed.push_back(glm::vec3(0, 0, 10));
-   objectData.movingSpeed.push_back(0.f);
-   objectData.invalidModelMatrix.push_back(true);
-   objectData.isChangingPosition.push_back(false);
-   objectData.isChangingRotation.push_back(false);
-   objectData.isChangingScale.push_back(false);
-   objectData.modelMatrix.push_back(glm::mat4());
-   objectData.movingDirection.push_back(glm::vec3(0, 0, 0));
-   objectData.targetPosition.push_back(glm::vec3(0, 0, 0));
-   objectData.targetRotation.push_back(glm::vec3(0, 0, 0));
-   objectData.targetScale.push_back(glm::vec3(0, 0, 0));   
+Vertex extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::index_t index)
+{
+   Vertex vertex ={};
+
+   vertex.position =
+   {
+      attrib.vertices[3 * index.vertex_index + 0],
+      attrib.vertices[3 * index.vertex_index + 1],
+      attrib.vertices[3 * index.vertex_index + 2]
+   };
+
+   vertex.texCoord =
+   {
+      attrib.texcoords[2 * index.texcoord_index + 0],
+      1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+   };
+
+   vertex.colour ={ 1.0f,1.0f,1.0f };
+
+   return vertex;
 }
 
 void Mesh::createIndexBuffer()
