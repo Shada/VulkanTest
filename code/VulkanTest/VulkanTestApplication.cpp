@@ -633,8 +633,10 @@ void HelloTriangleApplication::loadModel()
    mesh->loadMesh(MODEL_PATH_CHALET.c_str());
    mesh->loadMesh(MODEL_PATH_STORMTROOPER.c_str());
 
-   mesh->setPosition(glm::vec3(5.f, 5.f, 0.f), 1);
-   mesh->setRotationSpeed(0.f, 20.f, 15.f, 1);
+   worldObject.addInstance(0);
+   worldObject.addInstance(1, glm::vec3(1.f, 1.f, 0.f), glm::vec3(90.f, 0, 0.f), glm::vec3(0.5f));
+
+   worldObject.setRotationSpeed(1, 0.f, 0.f, 20.f);
 }
 
 size_t dynamicBufferSize = 0;
@@ -654,7 +656,7 @@ void HelloTriangleApplication::createUniformBuffer()
    size_t uboAlignment = (size_t)vulkanStuff.deviceProperties.limits.minUniformBufferOffsetAlignment;
    dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
 
-   bufferSize = mesh->getNumObjects() * dynamicAlignment;
+   bufferSize = worldObject.getNumberOfObjects() * dynamicAlignment;
    dynamicBufferSize = bufferSize;
    uboDataDynamic.model = (glm::mat4*)alignedAlloc(bufferSize, dynamicAlignment);
    assert(uboDataDynamic.model);
@@ -880,18 +882,19 @@ void HelloTriangleApplication::createCommandBuffers()
 
       VkDeviceSize offsets[] ={ 0 };
 
-      for(uint32_t j = 0; j < mesh->getNumObjects(); j++)
+      for(uint32_t j = 0; j < worldObject.getNumberOfObjects(); j++)
       {
-         VkBuffer vertexBuffers[] ={ mesh->getVertexBuffer(j) };
+         uint32_t meshId = worldObject.getMeshId(j);
+         VkBuffer vertexBuffers[] ={ mesh->getVertexBuffer(meshId) };
          vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-         vkCmdBindIndexBuffer(commandBuffers[i], mesh->getIndexBuffer(j), 0, VK_INDEX_TYPE_UINT32);
+         vkCmdBindIndexBuffer(commandBuffers[i], mesh->getIndexBuffer(meshId), 0, VK_INDEX_TYPE_UINT32);
 
          uint32_t dynamicOffset = j * static_cast<uint32_t>(dynamicAlignment);
 
-         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[j], 1, &dynamicOffset);
+         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[meshId], 1, &dynamicOffset);
 
-         vkCmdDrawIndexed(commandBuffers[i], mesh->getNumIndices(j), 1, 0, 0, 0);
+         vkCmdDrawIndexed(commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
       }
 
       vkCmdEndRenderPass(commandBuffers[i]);
@@ -1328,7 +1331,7 @@ void HelloTriangleApplication::mainLoop()
 
       glfwPollEvents();
 
-      mesh->update(float((double)dt / 1e9f));
+      worldObject.update(float((double)dt / 1e9f));
 
       updateUniformBuffer();
       updateDynamicUniformBuffer();
@@ -1372,11 +1375,11 @@ void HelloTriangleApplication::updateUniformBuffer()
 
 void HelloTriangleApplication::updateDynamicUniformBuffer()
 {
-   for(uint32_t i = 0; i < mesh->getNumObjects(); i++)
+   for(uint32_t i = 0; i < worldObject.getNumberOfObjects(); i++)
    {
       glm::mat4* modelMat = (glm::mat4*)(((uint64_t)uboDataDynamic.model + (i * dynamicAlignment)));
 
-      *modelMat = mesh->getModelMatrix(i);
+      *modelMat = worldObject.getModelMatrix(i);
    }
 
    void *data;

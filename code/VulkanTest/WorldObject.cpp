@@ -28,9 +28,13 @@ void WorldObject::updateModelMatrix()
    {
       if(isModelMatrixInvalid[i])
       {
-         modelMatrix[i] = glm::rotate(glm::mat4(), glm::radians(rotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f));
+         modelMatrix[i] = glm::translate(glm::mat4(), position[i]);
+         
+         modelMatrix[i] = glm::rotate(modelMatrix[i], glm::radians(rotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f));
          modelMatrix[i] = glm::rotate(modelMatrix[i], glm::radians(rotation[i].y), glm::vec3(0.0f, 1.0f, 0.0f));
          modelMatrix[i] = glm::rotate(modelMatrix[i], glm::radians(rotation[i].x), glm::vec3(1.0f, 0.0f, 0.0f));
+
+         modelMatrix[i] = glm::scale(modelMatrix[i], scale[i]);
       }
    }
 }
@@ -40,7 +44,7 @@ uint32_t WorldObject::addInstance(uint32_t meshId)
    this->meshId.push_back(meshId);
    position.push_back(glm::vec3(0, 0, 0));
    rotation.push_back(glm::vec3(0, 0, 0));
-   scale.push_back(glm::vec3(0, 0, 0));
+   scale.push_back(glm::vec3(1, 1, 1));
    rotationSpeed.push_back(glm::vec3(0, 0, 10));
    movingSpeed.push_back(0.f);
    isModelMatrixInvalid.push_back(true);

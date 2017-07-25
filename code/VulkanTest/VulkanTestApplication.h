@@ -85,7 +85,7 @@ private:
    // TODO: move texture to the mesh?
    Mesh *mesh;
    Texture *texture;
-   WorldObject object;
+   WorldObject worldObject;
 
    // list of these, mesh needs to point at it. 
    VulkanShader vertShader;

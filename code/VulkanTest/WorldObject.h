@@ -32,6 +32,11 @@ public:
       return static_cast<uint32_t>(meshId.size());
    }
 
+   uint32_t getMeshId(uint32_t index)
+   {
+      return meshId[index];
+   }
+
 private:
 
    void invalidateModelMatrix(uint32_t index);

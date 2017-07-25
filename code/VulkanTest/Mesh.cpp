@@ -49,7 +49,22 @@ void Mesh::loadMesh(const char* fileNames)
    {
       for(const auto& index : shape.mesh.indices)
       {
-         Vertex vertex = extractVertexFromAttrib(attrib, index);
+         Vertex vertex ={};
+
+         vertex.position =
+         {
+            attrib.vertices[3 * index.vertex_index + 0],
+            attrib.vertices[3 * index.vertex_index + 1],
+            attrib.vertices[3 * index.vertex_index + 2]
+         };
+
+         vertex.texCoord =
+         {
+            attrib.texcoords[2 * index.texcoord_index + 0],
+            1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
+         };
+
+         vertex.colour ={ 1.0f,1.0f,1.0f };
 
          if(uniqueVertices.count(vertex) == 0)
          {
@@ -67,11 +82,9 @@ void Mesh::loadMesh(const char* fileNames)
    createIndexBuffer();
 
    modelName.push_back(fileNames);
-
-   objectData.bufferId.push_back(vertexBuffer.size() - 1);   
 }
 
-Vertex extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::index_t index)
+Vertex Mesh::extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::index_t index)
 {
    Vertex vertex ={};
 
@@ -128,75 +141,6 @@ void Mesh::createIndexBuffer()
 
    vkDestroyBuffer(vulkanStuff->device, stagingBuffer, nullptr);
    vkFreeMemory(vulkanStuff->device, stagingMemory, nullptr);
-}
-int Mesh::addInstance(int meshId)
-{
-   //push pos/rot/scale/speed/etc.
-   return 0;
-}
-void Mesh::update(float dt)
-{
-   for(size_t i = 0; i < objectData.position.size(); i++)
-   {
-      if(objectData.movingSpeed[i] != 0.f)
-      {
-         objectData.position[i] += dt * objectData.movingSpeed[i] * objectData.movingDirection[i];
-         invalidateModelMatrix(i);
-      }
-   }
-   for(size_t i = 0; i < objectData.rotation.size(); i++)
-   {
-      if(objectData.rotationSpeed[i] != glm::vec3(0.f))
-      {
-         objectData.rotation[i] += dt * objectData.rotationSpeed[i];
-         invalidateModelMatrix(i);
-      }
-   }
-
-   updateModelMatrix();
-}
-
-void Mesh::setPosition(glm::vec3 position, int modelIndex)
-{
-   objectData.targetPosition[modelIndex] = position;
-   objectData.isChangingPosition[modelIndex] = true;
-}
-
-void Mesh::setRotation(glm::vec3 rotation, int modelIndex)
-{
-   objectData.targetRotation[modelIndex] = rotation;
-   objectData.isChangingRotation[modelIndex] = true;
-}
-
-void Mesh::setScale(glm::vec3 scale, int modelIndex)
-{
-   objectData.targetScale[modelIndex] = scale;
-   objectData.isChangingScale[modelIndex] = true;
-}
-
-void Mesh::setRotationSpeed(float yaw, float pitch, float roll, int index)
-{
-   objectData.rotationSpeed[index].x = yaw;
-   objectData.rotationSpeed[index].y = pitch;
-   objectData.rotationSpeed[index].z = roll;
-}
-
-void Mesh::invalidateModelMatrix(size_t modelIndex)
-{
-   objectData.invalidModelMatrix[modelIndex] = true;
-}
-
-void Mesh::updateModelMatrix()
-{
-   for(size_t i = 0; i < objectData.modelMatrix.size(); i++)
-   {
-      if(objectData.invalidModelMatrix[i])
-      {
-         objectData.modelMatrix[i] = glm::rotate(glm::mat4(), glm::radians(objectData.rotation[i].z), glm::vec3(0.0f, 0.0f, 1.0f));
-         objectData.modelMatrix[i] = glm::rotate(objectData.modelMatrix[i], glm::radians(objectData.rotation[i].y), glm::vec3(0.0f, 1.0f, 0.0f));
-         objectData.modelMatrix[i] = glm::rotate(objectData.modelMatrix[i], glm::radians(objectData.rotation[i].x), glm::vec3(1.0f, 0.0f, 0.0f));
-      }
-   }
 }
 
 void Mesh::createVertexBuffer()

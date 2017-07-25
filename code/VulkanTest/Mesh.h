@@ -5,69 +5,40 @@
 #include "stdafx.h"
 #include <string>
 
-/// TODO: Add unique name identifier. Should be able to get mesh stuff by unique name
+/// TODO: Add unique name identifier string? Should be able to get mesh stuff by unique name
 /// numerize name? ex: "model", "model1", "model2" ?
 /// when adding name, returning name or id..? 
 /// should be able so search for meshobject in some console or something
 
-/// TODO: split the mesh and the object. Mesh stuff like vetices and buffers in one structure /class
-/// and meshobject that references a mesh with the id, the meshobject have the transformations and
-/// and the behaviour. Coud be different types of objects too, like static/dynamic/animated etc
 class Mesh
 {
 public:
    Mesh(const VulkanStuff* vulkanStuff);
    ~Mesh();
 
-   // TODO: do so we can send in one or more objects. currently only one at a time
+   // TODO: do so we can send in one or more objects? currently only one at a time
    void loadMesh(const char* fileNames); 
-
-   // might want to send in initialising stuff.. 
-   // returns the index 
-   // could also do it by name?
-   int addInstance(int meshId); 
-
-   // this one updates all the models
-   void update(float dt);
-
-   void setPosition(glm::vec3, int modelindex);
-   void setRotation(glm::vec3, int modelindex);
-   void setScale(glm::vec3, int modelindex);
-
-   void setRotationSpeed(float yaw, float pitch, float roll, int index);
-   void setMovingSpeed(float movingSpeed, int index);
-   void setMovingDirection(glm::vec3 movingDirection, int index);
 
    VkBuffer getVertexBuffer(int index)
    {
-      size_t bufferIndex = objectData.bufferId[index];
-      return vertexBuffer[bufferIndex];
+      return vertexBuffer[index];
    }
    VkBuffer getIndexBuffer(int index)
    {
-      size_t bufferIndex = objectData.bufferId[index];
-      return indexBuffer[bufferIndex];
+      return indexBuffer[index];
    }
    uint32_t getNumIndices(int index)
    {
       return static_cast<uint32_t>(vertexData[index].indices.size());
    }
 
-   glm::mat4 getModelMatrix(int index)
+   uint32_t getNumberOfMeshes()
    {
-      return objectData.modelMatrix[index];
-   }
-
-   uint32_t getNumObjects()
-   {
-      return static_cast<uint32_t>(objectData.bufferId.size());
+      return static_cast<uint32_t>(modelName.size());
    }
 
 private:
    
-   void invalidateModelMatrix(size_t modelIndex);
-   void updateModelMatrix();
-
    void createVertexBuffer();
    void createIndexBuffer();
 
@@ -87,32 +58,9 @@ private:
    std::vector<VkDeviceMemory> indexBufferMemory;
    std::vector<std::string> modelName;
 
-   struct ObjectData
-   {
-      std::vector<size_t> bufferId;
-      std::vector<glm::vec3> position;
-      std::vector<glm::vec3> rotation;
-      std::vector<glm::vec3> scale;
+   Vertex extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::index_t index);
 
-      std::vector<glm::mat4> modelMatrix;
-      std::vector<bool> invalidModelMatrix;
-
-      // these are only for movable objects.
-      // should maybe break out to another object
-      std::vector<glm::vec3> movingDirection;
-      std::vector<float> movingSpeed;
-      std::vector<glm::vec3> rotationSpeed;
-
-      // When setting pos/rot/scale
-      // we use these to make nice transitions
-      std::vector<glm::vec3> targetScale;
-      std::vector<bool> isChangingScale;
-      std::vector<glm::vec3> targetPosition;
-      std::vector<bool> isChangingPosition;
-      std::vector<glm::vec3> targetRotation;
-      std::vector<bool> isChangingRotation;
-   }objectData;
-   // move to some helper_class
+// move to some helper_class
    void createBuffer(
       VkDeviceSize size,
       VkBufferUsageFlags usage,
