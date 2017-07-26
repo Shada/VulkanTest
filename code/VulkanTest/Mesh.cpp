@@ -1,11 +1,12 @@
 #include "Mesh.h"
 
-#include <tiny_obj_loader.h>
 #include <unordered_map>
 
 Mesh::Mesh(const VulkanStuff* vulkanStuff)
 {
    this->vulkanStuff = vulkanStuff;
+
+   texture = new Texture(vulkanStuff);
 }
 
 Mesh::~Mesh()
@@ -26,12 +27,35 @@ Mesh::~Mesh()
    {
       vkFreeMemory(vulkanStuff->device, memory, nullptr);
    }
+
    vulkanStuff = nullptr;
+
+   delete texture;
+   texture = nullptr;
 }
 
+
 // TODO: might want to try and make this look better.
-void Mesh::loadMesh(const char* fileNames)
+// TODO: handle loading of sub meshes. need to test how that works with the obj-loader. 
+// one submesh per material would be reasonable. but how do i store it in a good way? 
+// submesh points at a buffer (base mesh have the buffer) and startId/num indices. 
+// all meshes have at least one submesh, even if the mesh only is one single mesh and is not divided.
+// that makes it easy to optimize the code for each scenario. 
+
+
+// TODO: I currently do not support models where a material is user several times in a model with other material(s) in between
+void Mesh::loadMesh(const char* fileName)
 {
+   // Load TempMaterials.
+   // create vector tempSubMeshes for each meterial
+   
+
+   // how to do when a material mot is used... shouldn't need to have a submesh for thatm material... should the material exist? 
+   // doesn't harm to have an unused material I guess...
+   // Ok for now, might want to figure out how best handle later. 
+   // at least I should not create descriptorSet for these materials.. 
+   // descriptor sets exists in the submesh, so unused materials should not be included.
+
    VertexData tVertexData;
 
    tinyobj::attrib_t attrib;
@@ -39,32 +63,40 @@ void Mesh::loadMesh(const char* fileNames)
    std::vector<tinyobj::material_t> materials;
    std::string err;
    std::unordered_map<Vertex, uint32_t>uniqueVertices ={};
-
-   if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fileNames))
+   
+   if(!tinyobj::LoadObj(&attrib, &shapes, &materials, &err, fileName, "./models/"))
    {
       throw std::runtime_error(err);
    }
 
+   int baseMaterialId = material.size();
+
+   loadMaterials(materials);
+
+   std::vector<SubMesh> tSubMeshes(materials.size());
+
    for(const auto& shape : shapes)
    {
-      for(const auto& index : shape.mesh.indices)
+      for(int i = 0; i < shape.mesh.indices.size(); i++)
+      //for(const auto& index : shape.mesh.indices)
       {
+         tinyobj::index_t index = shape.mesh.indices[i];
+
          Vertex vertex ={};
+         
+         extractVertexFromAttrib(vertex, attrib, index);
 
-         vertex.position =
+         int subMeshId = shape.mesh.material_ids[std::floor(i / 3)];
+
+         if(tSubMeshes[subMeshId].numberOfIndices == 0)
          {
-            attrib.vertices[3 * index.vertex_index + 0],
-            attrib.vertices[3 * index.vertex_index + 1],
-            attrib.vertices[3 * index.vertex_index + 2]
-         };
+            int materialId = baseMaterialId + subMeshId;
+            tSubMeshes[subMeshId].materialId = materialId;
+            tSubMeshes[subMeshId].startIndex = tVertexData.indices.size();
+            tSubMeshes[subMeshId].meshId = modelName.size();
+         }
 
-         vertex.texCoord =
-         {
-            attrib.texcoords[2 * index.texcoord_index + 0],
-            1.0f - attrib.texcoords[2 * index.texcoord_index + 1]
-         };
-
-         vertex.colour ={ 1.0f,1.0f,1.0f };
+         tSubMeshes[subMeshId].numberOfIndices++;
 
          if(uniqueVertices.count(vertex) == 0)
          {
@@ -76,18 +108,51 @@ void Mesh::loadMesh(const char* fileNames)
       }
    }
 
+   for(const auto& tSubMesh : tSubMeshes)
+   {
+      if(tSubMesh.numberOfIndices > 0)
+      {
+         subMesh.push_back(tSubMesh);
+      }
+   }
+
    vertexData.push_back(tVertexData);
 
    createVertexBuffer();
    createIndexBuffer();
 
-   modelName.push_back(fileNames);
+   modelName.push_back(fileName);
 }
 
-Vertex Mesh::extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::index_t index)
+inline void Mesh::loadMaterials(std::vector<tinyobj::material_t>& materials)
 {
-   Vertex vertex ={};
+   for(const auto& material : materials)
+   {
+      Material tMaterial ={};
 
+      if(material.diffuse_texname != "")
+      {
+         tMaterial.diffuseTextureId = texture->loadTexture("./textures/" + material.diffuse_texname);
+      }
+      if(material.specular_texname != "")
+      {
+         tMaterial.specularTextureId = texture->loadTexture("./textures/" + material.specular_texname);
+      }
+      if(material.bump_texname != "")
+      {
+         tMaterial.bumpTextureId = texture->loadTexture("./textures/" + material.bump_texname);
+      }
+
+      tMaterial.ambientColour = glm::vec3(material.ambient[0], material.ambient[1], material.ambient[2]);
+      tMaterial.diffuseColour = glm::vec3(material.diffuse[0], material.diffuse[1], material.diffuse[2]);
+      tMaterial.specularColour = glm::vec3(material.specular[0], material.specular[1], material.specular[2]);
+
+      this->material.push_back(tMaterial);
+   }
+}
+
+inline void Mesh::extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& attrib, tinyobj::index_t& index)
+{
    vertex.position =
    {
       attrib.vertices[3 * index.vertex_index + 0],
@@ -103,9 +168,7 @@ Vertex Mesh::extractVertexFromAttrib(tinyobj::attrib_t attrib, const tinyobj::in
 
    vertex.colour ={ 1.0f,1.0f,1.0f };
 
-   return vertex;
 }
-
 void Mesh::createIndexBuffer()
 {
    VkDeviceSize bufferSize = sizeof(vertexData.back().indices[0]) * vertexData.back().indices.size();

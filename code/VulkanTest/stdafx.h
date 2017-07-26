@@ -15,6 +15,9 @@
 
 #include <chrono>
 
+
+const std::string MODEL_PATH_CUBE = "models/cube.obj";
+
 const std::string MODEL_PATH_CHALET = "models/chalet.obj";
 const std::string TEXTURE_PATH_CHALET = "textures/chalet.jpg";
 const std::string MODEL_PATH_STORMTROOPER = "models/stormtrooper.obj";

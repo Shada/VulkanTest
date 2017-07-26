@@ -630,13 +630,25 @@ VkImageView HelloTriangleApplication::createImageView(VkImage image, VkFormat fo
 
 void HelloTriangleApplication::loadModel()
 {
-   mesh->loadMesh(MODEL_PATH_CHALET.c_str());
-   mesh->loadMesh(MODEL_PATH_STORMTROOPER.c_str());
+   mesh->loadMesh(MODEL_PATH_CUBE.c_str());
+   mesh->loadMesh(MODEL_PATH_CUBE.c_str());
 
-   worldObject.addInstance(0);
-   worldObject.addInstance(1, glm::vec3(1.f, 1.f, 0.f), glm::vec3(90.f, 0, 0.f), glm::vec3(0.5f));
+   worldObject.addInstance(0, glm::vec3(0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(0, glm::vec3(1.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(0, glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(1.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(0, glm::vec3(1.f, 1.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(0.f, 1.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(0, glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(1.f, 0.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(0, glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject.addInstance(1, glm::vec3(0.f, 1.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
 
    worldObject.setRotationSpeed(1, 0.f, 0.f, 20.f);
+   worldObject.setRotationSpeed(2, 0.f, 20.f, 20.f);
+   worldObject.setRotationSpeed(3, 20.f, 0.f, 20.f);
 }
 
 size_t dynamicBufferSize = 0;
@@ -683,17 +695,17 @@ void HelloTriangleApplication::createDescriptorPool()
 {
    std::array<VkDescriptorPoolSize, 3> poolSizes ={};
    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   poolSizes[0].descriptorCount = 2;
+   poolSizes[0].descriptorCount = 200;
    poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   poolSizes[1].descriptorCount = 2;
+   poolSizes[1].descriptorCount = 200;
    poolSizes[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   poolSizes[2].descriptorCount = 2;
+   poolSizes[2].descriptorCount = 200;
 
    VkDescriptorPoolCreateInfo poolInfo ={};
    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
    poolInfo.pPoolSizes    = poolSizes.data();
-   poolInfo.maxSets       = 2;
+   poolInfo.maxSets       = 200;
 
    if(vkCreateDescriptorPool(vulkanStuff.device, &poolInfo, nullptr, descriptorPool.replace()) != VK_SUCCESS)
    {

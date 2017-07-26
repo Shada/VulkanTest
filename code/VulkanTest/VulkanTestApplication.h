@@ -2,7 +2,6 @@
 
 #include "stdafx.h"
 #include "VulkanShader.h"
-#include <tiny_obj_loader.h>
 #include "Camera.h"
 #include "Mesh.h"
 #include "Texture.h"
