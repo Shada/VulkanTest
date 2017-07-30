@@ -1,12 +1,16 @@
 #pragma once
 
 #include <vector>
-#include "glm\glm.hpp"
 #include <glm\gtc\matrix_transform.hpp>
+#include <glm\glm.hpp>
+
+#include "WorldObjectToMeshMapper.h"
 
 class WorldObject
 {
 public:
+
+   WorldObject(WorldObjectToMeshMapper* worldObjectToMeshMapper);
 
    // could also do it by name?
    uint32_t addInstance(uint32_t meshId);
@@ -29,7 +33,7 @@ public:
 
    uint32_t getNumberOfObjects()
    {
-      return static_cast<uint32_t>(meshId.size());
+      return numberOfObjects;
    }
 
    uint32_t getMeshId(uint32_t index)
@@ -42,6 +46,9 @@ private:
    void invalidateModelMatrix(uint32_t index);
    void updateModelMatrix();
 
+   WorldObjectToMeshMapper* worldObjectToMeshMapper;
+
+   uint32_t numberOfObjects;
    std::vector<uint32_t> meshId;
    std::vector<glm::vec3> position;
    std::vector<glm::vec3> rotation;

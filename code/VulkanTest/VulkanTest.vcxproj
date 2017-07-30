@@ -26,6 +26,7 @@
     <ClCompile Include="VulkanShader.cpp" />
     <ClCompile Include="VulkanTestApplication.cpp" />
     <ClCompile Include="WorldObject.cpp" />
+    <ClCompile Include="WorldObjectToMeshMapper.cpp" />
   </ItemGroup>
   <ItemGroup>
     <ClInclude Include="Camera.h" />
@@ -36,6 +37,7 @@
     <ClInclude Include="VulkanShader.h" />
     <ClInclude Include="VulkanTestApplication.h" />
     <ClInclude Include="WorldObject.h" />
+    <ClInclude Include="WorldObjectToMeshMapper.h" />
   </ItemGroup>
   <PropertyGroup Label="Globals">
     <VCProjectVersion>15.0</VCProjectVersion>

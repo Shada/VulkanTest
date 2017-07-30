@@ -84,7 +84,8 @@ private:
    // TODO: move texture to the mesh?
    Mesh *mesh;
    Texture *texture;
-   WorldObject worldObject;
+   WorldObject *worldObject;
+   WorldObjectToMeshMapper *worldObjectToMeshMapper;
 
    // list of these, mesh needs to point at it. 
    VulkanShader vertShader;
@@ -103,8 +104,6 @@ private:
    
    VDeleter<VkSemaphore> imageAvailableSemaphore{ vulkanStuff.device, vkDestroySemaphore };
    VDeleter<VkSemaphore> renderFinishedSemaphore{ vulkanStuff.device, vkDestroySemaphore };
-
-   std::vector<VkCommandBuffer> commandBuffers;
 
    Camera camera;
 
@@ -158,6 +157,8 @@ private:
    void createDescriptorPool();
 
    void createDescriptorSet(int textureIndex);
+
+   void updateDescriptorSet(int index);
 
    void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 

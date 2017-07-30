@@ -7,6 +7,8 @@ Mesh::Mesh(const VulkanStuff* vulkanStuff)
    this->vulkanStuff = vulkanStuff;
 
    texture = new Texture(vulkanStuff);
+
+   descriptor = new VulkanDescriptor(vulkanStuff);
 }
 
 Mesh::~Mesh()
@@ -69,7 +71,7 @@ void Mesh::loadMesh(const char* fileName)
       throw std::runtime_error(err);
    }
 
-   int baseMaterialId = material.size();
+   uint32_t baseMaterialId = static_cast<uint32_t>(material.size());
 
    loadMaterials(materials);
 
@@ -86,14 +88,14 @@ void Mesh::loadMesh(const char* fileName)
          
          extractVertexFromAttrib(vertex, attrib, index);
 
-         int subMeshId = shape.mesh.material_ids[std::floor(i / 3)];
+         int subMeshId = shape.mesh.material_ids[(int)std::floor(i / 3)];
 
          if(tSubMeshes[subMeshId].numberOfIndices == 0)
          {
             int materialId = baseMaterialId + subMeshId;
             tSubMeshes[subMeshId].materialId = materialId;
-            tSubMeshes[subMeshId].startIndex = tVertexData.indices.size();
-            tSubMeshes[subMeshId].meshId = modelName.size();
+            tSubMeshes[subMeshId].startIndex = static_cast<uint32_t>(tVertexData.indices.size());
+            tSubMeshes[subMeshId].meshId = static_cast<uint32_t>(modelName.size());
          }
 
          tSubMeshes[subMeshId].numberOfIndices++;
@@ -122,6 +124,14 @@ void Mesh::loadMesh(const char* fileName)
    createIndexBuffer();
 
    modelName.push_back(fileName);
+}
+
+void Mesh::draw(int commandBufferIndex)
+{
+   //for loops here. for each mesh, for each instance
+   // the objects need to be sorted by mesh to be optimized. this might need to be moved into a coupler class/struct to work best
+   vkCmdBindDescriptorSets(vulkanStuff->commandBuffers[commandBufferIndex], VkPipelineBindPoint(), 0, 0, 1, descriptor->getDescriptorSet(0), 0, nullptr);
+   
 }
 
 inline void Mesh::loadMaterials(std::vector<tinyobj::material_t>& materials)

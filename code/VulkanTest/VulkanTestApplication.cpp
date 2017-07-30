@@ -92,6 +92,9 @@ void HelloTriangleApplication::initVulkan()
 
    texture = new Texture(&vulkanStuff);
 
+   worldObjectToMeshMapper = new WorldObjectToMeshMapper();
+   worldObject = new WorldObject(worldObjectToMeshMapper);
+
    createInstance();
    setupDebugCallback();
    createSurface();
@@ -112,6 +115,16 @@ void HelloTriangleApplication::initVulkan()
    createDescriptorSet(textureIndex);
    textureIndex = createTextureImage(TEXTURE_PATH_STORMTROOPER);
    createDescriptorSet(textureIndex);
+
+
+   int index = worldObject->addInstance(1, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(.3f));
+   worldObject->setRotationSpeed(index, 0.0f, 0.0f, 0.0f);
+
+   createUniformBuffer();
+
+   updateDescriptorSet(0);
+   updateDescriptorSet(1);
+
    createCommandBuffers();
    createSemaphores();
 }
@@ -633,22 +646,12 @@ void HelloTriangleApplication::loadModel()
    mesh->loadMesh(MODEL_PATH_CUBE.c_str());
    mesh->loadMesh(MODEL_PATH_CUBE.c_str());
 
-   worldObject.addInstance(0, glm::vec3(0.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(0, glm::vec3(1.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(0, glm::vec3(0.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(1.f, 0.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(0, glm::vec3(1.f, 1.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(0.f, 1.f, -1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(0, glm::vec3(0.f, 0.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(1.f, 0.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(0, glm::vec3(1.f, 1.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
-   worldObject.addInstance(1, glm::vec3(0.f, 1.f, 1.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject->addInstance(0, glm::vec3(0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject->addInstance(1, glm::vec3(1.f, 0.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
+   worldObject->addInstance(0, glm::vec3(1.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(0.3f));
 
-   worldObject.setRotationSpeed(1, 0.f, 0.f, 20.f);
-   worldObject.setRotationSpeed(2, 0.f, 20.f, 20.f);
-   worldObject.setRotationSpeed(3, 20.f, 0.f, 20.f);
+   worldObject->setRotationSpeed(1, 0.f, 0.f, 20.f);
+   worldObject->setRotationSpeed(2, 0.f, 20.f, 20.f);
 }
 
 size_t dynamicBufferSize = 0;
@@ -668,7 +671,7 @@ void HelloTriangleApplication::createUniformBuffer()
    size_t uboAlignment = (size_t)vulkanStuff.deviceProperties.limits.minUniformBufferOffsetAlignment;
    dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
 
-   bufferSize = worldObject.getNumberOfObjects() * dynamicAlignment;
+   bufferSize = worldObject->getNumberOfObjects() * dynamicAlignment;
    dynamicBufferSize = bufferSize;
    uboDataDynamic.model = (glm::mat4*)alignedAlloc(bufferSize, dynamicAlignment);
    assert(uboDataDynamic.model);
@@ -742,7 +745,7 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 
    VkDescriptorImageInfo imageSamplerInfo ={};
    imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   imageSamplerInfo.imageView   = texture->getImageView(textureIndex);;
+   imageSamplerInfo.imageView   = texture->getImageView(textureIndex);
    imageSamplerInfo.sampler     = texture->getSampler(textureIndex);
 
    std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
@@ -780,7 +783,57 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 
    descriptorSet.push_back(tempDescriptor);
 }
+void HelloTriangleApplication::updateDescriptorSet(int index)
+{
 
+   VkDescriptorBufferInfo uboBufferInfo ={};
+   uboBufferInfo.buffer = uniformBuffers.cameraBuffer;
+   uboBufferInfo.offset = 0;
+   uboBufferInfo.range  = VK_WHOLE_SIZE;
+
+   VkDescriptorBufferInfo dynamicBufferInfo ={};
+   dynamicBufferInfo.buffer = uniformBuffers.dynamicBuffer;
+   dynamicBufferInfo.offset = 0;
+   dynamicBufferInfo.range  = VK_WHOLE_SIZE;
+
+   VkDescriptorImageInfo imageSamplerInfo ={};
+   imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+   imageSamplerInfo.imageView   = texture->getImageView(0);
+   imageSamplerInfo.sampler     = texture->getSampler(0);
+
+   std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
+   descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWrites[0].dstSet           = descriptorSet[index];
+   descriptorWrites[0].dstBinding       = 0;
+   descriptorWrites[0].dstArrayElement  = 0;
+   descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   descriptorWrites[0].descriptorCount  = 1;
+   descriptorWrites[0].pBufferInfo      = &uboBufferInfo;
+   descriptorWrites[0].pImageInfo       = nullptr;
+   descriptorWrites[0].pTexelBufferView = nullptr;
+
+   descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWrites[1].dstSet           = descriptorSet[index];
+   descriptorWrites[1].dstBinding       = 1;
+   descriptorWrites[1].dstArrayElement  = 0;
+   descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   descriptorWrites[1].descriptorCount  = 1;
+   descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
+   descriptorWrites[1].pImageInfo       = nullptr;
+   descriptorWrites[1].pTexelBufferView = nullptr;
+
+   descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWrites[2].dstSet           = descriptorSet[index];
+   descriptorWrites[2].dstBinding       = 2;
+   descriptorWrites[2].dstArrayElement  = 0;
+   descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   descriptorWrites[2].descriptorCount  = 1;
+   descriptorWrites[2].pBufferInfo      = nullptr;
+   descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
+   descriptorWrites[2].pTexelBufferView = nullptr;
+
+   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+}
 void HelloTriangleApplication::createBuffer(
    VkDeviceSize size,
    VkBufferUsageFlags usage,
@@ -847,15 +900,15 @@ uint32_t HelloTriangleApplication::findMemoryType(uint32_t typeFiter, VkMemoryPr
 
 void HelloTriangleApplication::createCommandBuffers()
 {
-   commandBuffers.resize(swapChainFrameBuffers.size());
+   vulkanStuff.commandBuffers.resize(swapChainFrameBuffers.size());
 
    VkCommandBufferAllocateInfo allocInfo ={};
    allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
    allocInfo.commandPool        = vulkanStuff.commandPool;
    allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-   allocInfo.commandBufferCount = (uint32_t)commandBuffers.size();
+   allocInfo.commandBufferCount = (uint32_t)vulkanStuff.commandBuffers.size();
 
-   if(vkAllocateCommandBuffers(vulkanStuff.device, &allocInfo, commandBuffers.data()) != VK_SUCCESS)
+   if(vkAllocateCommandBuffers(vulkanStuff.device, &allocInfo, vulkanStuff.commandBuffers.data()) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create command buffers!");
    }
@@ -877,41 +930,41 @@ void HelloTriangleApplication::createCommandBuffers()
    renderPassBeginInfo.clearValueCount   = static_cast<uint32_t>(clearValues.size());
    renderPassBeginInfo.pClearValues      = clearValues.data();
 
-   for(size_t i = 0; i < commandBuffers.size(); i++)
+   for(size_t i = 0; i < vulkanStuff.commandBuffers.size(); i++)
    {
       renderPassBeginInfo.framebuffer = swapChainFrameBuffers[i];
 
-      if(vkBeginCommandBuffer(commandBuffers[i], &beginInfo) != VK_SUCCESS)
+      if(vkBeginCommandBuffer(vulkanStuff.commandBuffers[i], &beginInfo) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to begin command buffer recording!");
       }
 
-      vkCmdBeginRenderPass(commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
+      vkCmdBeginRenderPass(vulkanStuff.commandBuffers[i], &renderPassBeginInfo, VK_SUBPASS_CONTENTS_INLINE);
 
-      vkCmdSetViewport(commandBuffers[i], 0, 1, &viewport);
+      vkCmdSetViewport(vulkanStuff.commandBuffers[i], 0, 1, &viewport);
 
-      vkCmdBindPipeline(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
+      vkCmdBindPipeline(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, graphicsPipeline);
 
       VkDeviceSize offsets[] ={ 0 };
 
-      for(uint32_t j = 0; j < worldObject.getNumberOfObjects(); j++)
+      for(uint32_t j = 0; j < worldObject->getNumberOfObjects(); j++)
       {
-         uint32_t meshId = worldObject.getMeshId(j);
+         uint32_t meshId = worldObject->getMeshId(j);
          VkBuffer vertexBuffers[] ={ mesh->getVertexBuffer(meshId) };
-         vkCmdBindVertexBuffers(commandBuffers[i], 0, 1, vertexBuffers, offsets);
+         vkCmdBindVertexBuffers(vulkanStuff.commandBuffers[i], 0, 1, vertexBuffers, offsets);
 
-         vkCmdBindIndexBuffer(commandBuffers[i], mesh->getIndexBuffer(meshId), 0, VK_INDEX_TYPE_UINT32);
+         vkCmdBindIndexBuffer(vulkanStuff.commandBuffers[i], mesh->getIndexBuffer(meshId), 0, VK_INDEX_TYPE_UINT32);
 
          uint32_t dynamicOffset = j * static_cast<uint32_t>(dynamicAlignment);
 
-         vkCmdBindDescriptorSets(commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[meshId], 1, &dynamicOffset);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[meshId], 1, &dynamicOffset);
 
-         vkCmdDrawIndexed(commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
+         vkCmdDrawIndexed(vulkanStuff.commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
       }
 
-      vkCmdEndRenderPass(commandBuffers[i]);
+      vkCmdEndRenderPass(vulkanStuff.commandBuffers[i]);
 
-      if(vkEndCommandBuffer(commandBuffers[i]) != VK_SUCCESS)
+      if(vkEndCommandBuffer(vulkanStuff.commandBuffers[i]) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to record command buffer!");
       }
@@ -1343,7 +1396,7 @@ void HelloTriangleApplication::mainLoop()
 
       glfwPollEvents();
 
-      worldObject.update(float((double)dt / 1e9f));
+      worldObject->update(float((double)dt / 1e9f));
 
       updateUniformBuffer();
       updateDynamicUniformBuffer();
@@ -1387,11 +1440,11 @@ void HelloTriangleApplication::updateUniformBuffer()
 
 void HelloTriangleApplication::updateDynamicUniformBuffer()
 {
-   for(uint32_t i = 0; i < worldObject.getNumberOfObjects(); i++)
+   for(uint32_t i = 0; i < worldObject->getNumberOfObjects(); i++)
    {
       glm::mat4* modelMat = (glm::mat4*)(((uint64_t)uboDataDynamic.model + (i * dynamicAlignment)));
 
-      *modelMat = worldObject.getModelMatrix(i);
+      *modelMat = worldObject->getModelMatrix(i);
    }
 
    void *data;
@@ -1442,7 +1495,7 @@ void HelloTriangleApplication::drawFrame()
    submitInfo.pWaitSemaphores    = waitSemaphores;
    submitInfo.pWaitDstStageMask  = waitStages;
    submitInfo.commandBufferCount = 1;
-   submitInfo.pCommandBuffers    = &commandBuffers[imageIndex];
+   submitInfo.pCommandBuffers    = &vulkanStuff.commandBuffers[imageIndex];
 
    VkSemaphore signalSemaphores[] ={ renderFinishedSemaphore };
    submitInfo.signalSemaphoreCount = 1;

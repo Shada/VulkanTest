@@ -3,18 +3,17 @@
 #define GLM_FORCE_RADIANS
 
 #include <GLFW/glfw3.h>
-#include "VDeleter.h"
-
-#include <vector>
-#include <iostream>
-#include <array>
 
 #include <glm\glm.hpp>
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\gtx\hash.hpp>
 
+#include <vector>
+#include <iostream>
+#include <array>
 #include <chrono>
 
+#include "VDeleter.h"
 
 const std::string MODEL_PATH_CUBE = "models/cube.obj";
 
@@ -33,6 +32,7 @@ struct VulkanStuff
    VDeleter<VkDevice> device{ vkDestroyDevice };
    VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
    VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+   std::vector<VkCommandBuffer> commandBuffers;
 
    VkPhysicalDeviceProperties deviceProperties;
    VkPhysicalDeviceFeatures deviceFeatures;

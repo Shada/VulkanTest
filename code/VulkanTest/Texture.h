@@ -108,33 +108,36 @@ private:
          barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
       }
 
-      if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED
-         && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+      switch(oldLayout | newLayout)
       {
-         barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-         barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-      }
-      else if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED &&
-         newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-      {
-         barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-         barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-      }
-      else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-         newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-      {
-         barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-         barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-      }
-      else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-         newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-      {
-         barrier.srcAccessMask = 0;
-         barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-      }
-      else
-      {
-         throw std::invalid_argument("unsupported layout transition!");
+         case VK_IMAGE_LAYOUT_PREINITIALIZED | VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL:
+         {
+            barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+            break;
+         }
+         case VK_IMAGE_LAYOUT_PREINITIALIZED | VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL:
+         {
+            barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            break;
+         }
+         case VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL | VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL:
+         {
+            barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+            barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+            break;
+         }
+         case VK_IMAGE_LAYOUT_UNDEFINED | VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL:
+         {
+            barrier.srcAccessMask = 0;
+            barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+            break;
+         }
+         default:
+         {
+            throw std::invalid_argument("unsupported layout transition!");
+         }
       }
 
       vkCmdPipelineBarrier(

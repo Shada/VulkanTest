@@ -7,10 +7,167 @@
 #include "stdafx.h"
 #include "Texture.h"
 
+// TODO: Support various types of descriptors with different layouts. 
+
+
+struct VulkanDescriptor
+{
+   VkDescriptorPool descriptorPool;
+   VkDescriptorSetLayout descriptorSetLayout; // could be a vector.one for each descriptor set, or each descriptor points to a layout
+   std::vector<VkDescriptorSet> descriptorSet;
+
+   const VulkanStuff *vulkanStuff;
+
+   VulkanDescriptor(const VulkanStuff *vulkanStuff)
+   {
+      this->vulkanStuff = vulkanStuff;
+   }
+
+   void createDescriptorPool()
+   {
+      std::array<VkDescriptorPoolSize, 3> poolSizes ={};
+      poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      poolSizes[0].descriptorCount = 200;
+      poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+      poolSizes[1].descriptorCount = 200;
+      poolSizes[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      poolSizes[2].descriptorCount = 200;
+
+      VkDescriptorPoolCreateInfo poolInfo ={};
+      poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+      poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
+      poolInfo.pPoolSizes    = poolSizes.data();
+      poolInfo.maxSets       = 200;
+
+      if(vkCreateDescriptorPool(vulkanStuff->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to create descriptor pool!");
+      }
+   }
+
+   int createDescriptorSet(VkDescriptorBufferInfo uniformBufferInfo, VkDescriptorBufferInfo dynamicBufferInfo, VkDescriptorImageInfo imageSamplerInfo)
+   {
+      VkDescriptorSet tempDescriptor;
+      VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
+
+      VkDescriptorSetAllocateInfo allocInfo ={};
+      allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+      allocInfo.descriptorPool     = descriptorPool;
+      allocInfo.descriptorSetCount = 1;
+      allocInfo.pSetLayouts        = layouts;
+
+      if(vkAllocateDescriptorSets(vulkanStuff->device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to allocate descriptor set!");
+      }
+
+      std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
+      descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[0].dstSet           = tempDescriptor;
+      descriptorWrites[0].dstBinding       = 0;
+      descriptorWrites[0].dstArrayElement  = 0;
+      descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      descriptorWrites[0].descriptorCount  = 1;
+      descriptorWrites[0].pBufferInfo      = &uniformBufferInfo;
+      descriptorWrites[0].pImageInfo       = nullptr;
+      descriptorWrites[0].pTexelBufferView = nullptr;
+
+      descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[1].dstSet           = tempDescriptor;
+      descriptorWrites[1].dstBinding       = 1;
+      descriptorWrites[1].dstArrayElement  = 0;
+      descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+      descriptorWrites[1].descriptorCount  = 1;
+      descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
+      descriptorWrites[1].pImageInfo       = nullptr;
+      descriptorWrites[1].pTexelBufferView = nullptr;
+
+      descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWrites[2].dstSet           = tempDescriptor;
+      descriptorWrites[2].dstBinding       = 2;
+      descriptorWrites[2].dstArrayElement  = 0;
+      descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWrites[2].descriptorCount  = 1;
+      descriptorWrites[2].pBufferInfo      = nullptr;
+      descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
+      descriptorWrites[2].pTexelBufferView = nullptr;
+
+      vkUpdateDescriptorSets(vulkanStuff->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+
+      descriptorSet.push_back(tempDescriptor);
+
+      return static_cast<uint32_t>(descriptorSet.size() - 1);
+   }
+
+   // This should be less hard coded. like send in an array of layout bindings
+   void createDescriptorSetLayout()
+   {
+      VkDescriptorSetLayoutBinding uboLayoutBinding ={};
+      uboLayoutBinding.binding            = 0;
+      uboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+      uboLayoutBinding.descriptorCount    = 1;
+      uboLayoutBinding.pImmutableSamplers = nullptr;
+      uboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+
+      VkDescriptorSetLayoutBinding dynamicUboLayoutBinding ={};
+      dynamicUboLayoutBinding.binding            = 1;
+      dynamicUboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+      dynamicUboLayoutBinding.descriptorCount    = 1;
+      dynamicUboLayoutBinding.pImmutableSamplers = nullptr;
+      dynamicUboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+
+      VkDescriptorSetLayoutBinding samplerLayoutBinding ={};
+      samplerLayoutBinding.binding            = 2;
+      samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      samplerLayoutBinding.descriptorCount    = 1;
+      samplerLayoutBinding.pImmutableSamplers = nullptr;
+      samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+
+      std::vector<VkDescriptorSetLayoutBinding> bindings =
+      {
+         uboLayoutBinding,
+         dynamicUboLayoutBinding,
+         samplerLayoutBinding
+      };
+
+      VkDescriptorSetLayoutCreateInfo layoutInfo ={};
+      layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+      layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
+      layoutInfo.pBindings    = bindings.data();
+
+      if(vkCreateDescriptorSetLayout(vulkanStuff->device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to create descriptor set layout!");
+      }
+   }
+
+   void updateDescriptor(int index/* , insert data to be added to the descriptor here */)
+   {
+      // update the descriptor at index position
+   }
+
+   const VkDescriptorSet *getDescriptorSet(int index)
+   {
+      return &descriptorSet[index];
+   }
+};
+
 /// TODO: Add unique name identifier string? Should be able to get mesh stuff by unique name
 /// numerize name? ex: "model", "model1", "model2" ?
 /// when adding name, returning name or id..? 
 /// should be able so search for meshobject in some console or something
+
+
+// TODO: enable more that one model per buffer.
+// a vertex buffer should have some minimal amount of vertices
+// this optimizes things when having low poly meshes.
+
+// when drawing each buffer should only be loaded once.
+// use offsets when drawing.
+// need to utilize some class or stucture that couples a mesh with a worldObject
+
+// will have to load the material somehow. one material per submesh. 
+// dynamic buffer? push constants? have to research best practices.
 
 class Mesh
 {
@@ -20,6 +177,8 @@ public:
 
    // TODO: do so we can send in one or more objects? currently only one at a time
    void loadMesh(const char* fileNames); 
+
+   void draw(int commandBufferIndex);
 
    VkBuffer getVertexBuffer(int index)
    {
@@ -85,7 +244,7 @@ private:
 
    std::vector<SubMesh> subMesh;
 
-   std::vector<VkDescriptorSet> descriptorSet;
+   VulkanDescriptor *descriptor;
 
    // TODO: might need a vector of these to make sure that I can expand with more descriptors if needed.
    // for example have a decriptorPool for up to ~100 meshes, and then create a new descriptorPool if it's needed.
@@ -171,33 +330,5 @@ private:
       }
 
       throw std::runtime_error("failed to find suitable memory type!");
-   }
-};
-
-struct VulkanDescriptors
-{
-   VkDescriptorPool descriptorPool;
-   std::vector<VkDescriptorSet> descriptorSet;
-
-   void createDescriptorPool()
-   {
-      // copy create code here
-   }
-
-   int createDescriptor()
-   {
-      // add create code here.
-      // returns the Id of the descriptor so it can be updated etc
-      return 0;
-   }
-
-   void updateDescriptor(int index/* , insert data to be added to the descriptor here */)
-   {
-      // update the descriptor at index position
-   }
-
-   VkDescriptorSet getDescriptorSet(int index)
-   {
-      return descriptorSet[index];
    }
 };
