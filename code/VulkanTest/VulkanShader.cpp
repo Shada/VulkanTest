@@ -21,10 +21,10 @@ void VulkanShader::loadShader(const std::string &filename)
    file.close();
 }
 
-void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
+//TODO: we only have one shader module... so why do we store it as a vector?
+// what is it used for?
+void VulkanShader::createShaderModule(VkDevice &device)
 {
-   shaderModule.resize(1, VDeleter<VkShaderModule>{ device, vkDestroyShaderModule });
-
    std::vector<uint32_t> codeAlligned(buffer.size() / sizeof(uint32_t) + 1);
    memcpy(codeAlligned.data(), buffer.data(), buffer.size());
 
@@ -34,7 +34,7 @@ void VulkanShader::createShaderModule(VDeleter<VkDevice> &device)
    createInfo.codeSize = buffer.size();
    createInfo.pCode    = codeAlligned.data();
 
-   if(vkCreateShaderModule(device, &createInfo, nullptr, shaderModule[0].replace()) != VK_SUCCESS)
+   if(vkCreateShaderModule(device, &createInfo, nullptr, &shaderModule) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create shader module " + filename + "!");
    }
@@ -47,7 +47,7 @@ VkPipelineShaderStageCreateInfo VulkanShader::createShaderStage(ShaderType shade
    shaderStageInfo.sType = VK_STRUCTURE_TYPE_PIPELINE_SHADER_STAGE_CREATE_INFO;
    shaderStageInfo.stage = (VkShaderStageFlagBits)shaderType;
 
-   shaderStageInfo.module = shaderModule[0];
+   shaderStageInfo.module = shaderModule;
    shaderStageInfo.pName  = "main";
 
    return shaderStageInfo;

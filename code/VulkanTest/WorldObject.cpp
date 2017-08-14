@@ -4,10 +4,20 @@
 //TODO: add collision box and collision detections. Object vs object, and object vs ray to start
 
 
-WorldObject::WorldObject(WorldObjectToMeshMapper *worldObjectToMeshMapper)
+WorldObject::WorldObject(WorldObjectToMeshMapper *worldObjectToMeshMapper, const VulkanStuff *vulkanStuff)
 {
    this->worldObjectToMeshMapper = worldObjectToMeshMapper;
+   this->vulkanStuff = vulkanStuff;
+
    numberOfObjects = 0;
+}
+
+WorldObject::~WorldObject()
+{
+   vkDestroyBuffer(vulkanStuff->device, worldMatrixUBO, nullptr);
+   vkFreeMemory(vulkanStuff->device, worldMatrixUBOMemory, nullptr);
+
+   vkDestroyDescriptorSetLayout(vulkanStuff->device, descriptorSetLayout, nullptr);
 }
 
 void WorldObject::update(float dt)
@@ -47,6 +57,73 @@ void WorldObject::updateModelMatrix()
          modelMatrix[i] = glm::scale(modelMatrix[i], scale[i]);
       }
    }
+}
+
+void WorldObject::createDescriptorPool()
+{
+   VkDescriptorPoolSize poolSize ={};
+   poolSize.type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   poolSize.descriptorCount = 1;
+
+   VkDescriptorPoolCreateInfo poolInfo ={};
+   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+   poolInfo.poolSizeCount = 1;
+   poolInfo.pPoolSizes    = &poolSize;
+   poolInfo.maxSets       = 1;
+
+   if(vkCreateDescriptorPool(vulkanStuff->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to create descriptor pool!");
+   }
+}
+
+void WorldObject::createDescriptorSetLayout()
+{
+   auto descriptorSetLayoutBinding = createDescriptorSetLayoutBinding();
+
+   auto layoutCreateInfo = vulkan::initialisers::createDescriptorSetLayoutCreateInfo(descriptorSetLayoutBinding);
+
+   if(vkCreateDescriptorSetLayout(vulkanStuff->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to create Matrix Buffer descriptor set layout!");
+   }
+}
+
+void WorldObject::createDescriptorSet()
+{
+   return;
+   createDescriptorPool();
+
+   VkDescriptorSetAllocateInfo allocInfoMatrixBuffer ={};
+   allocInfoMatrixBuffer.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   allocInfoMatrixBuffer.descriptorPool     = descriptorPool;
+   allocInfoMatrixBuffer.descriptorSetCount = 1;
+   allocInfoMatrixBuffer.pSetLayouts        = &descriptorSetLayout;
+
+   if(vkAllocateDescriptorSets(vulkanStuff->device, &allocInfoMatrixBuffer, &descriptorSet) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to allocate MatrixBuffer descriptor set!");
+   }
+
+
+   VkDescriptorBufferInfo dynamicBufferInfo ={};
+   dynamicBufferInfo.buffer = worldMatrixUBO;
+   dynamicBufferInfo.offset = 0;
+   dynamicBufferInfo.range  = VK_WHOLE_SIZE;
+
+   VkWriteDescriptorSet descriptorWritesMatrixBuffer ={};
+
+   descriptorWritesMatrixBuffer.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrixBuffer.dstSet           = descriptorSet;
+   descriptorWritesMatrixBuffer.dstBinding       = 1;
+   descriptorWritesMatrixBuffer.dstArrayElement  = 0;
+   descriptorWritesMatrixBuffer.descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   descriptorWritesMatrixBuffer.descriptorCount  = 1;
+   descriptorWritesMatrixBuffer.pBufferInfo      = &dynamicBufferInfo;
+   descriptorWritesMatrixBuffer.pImageInfo       = nullptr;
+   descriptorWritesMatrixBuffer.pTexelBufferView = nullptr;
+
+   vkUpdateDescriptorSets(vulkanStuff->device, 1, &descriptorWritesMatrixBuffer, 0, nullptr);
 }
 
 uint32_t WorldObject::addInstance(uint32_t meshId)

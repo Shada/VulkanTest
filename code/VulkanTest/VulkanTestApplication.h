@@ -7,8 +7,7 @@
 #include "Texture.h"
 #include "WorldObject.h"
 
-/// TODO: Cleanup. Remove using of VDeleter. It only complicates things for now. 
-/// Not needed with proper cleanup.
+/// TODO: fix proper cleanup. currently lots of stuff that is not deleted correctly/at all
 class HelloTriangleApplication
 {
 private:
@@ -79,7 +78,7 @@ private:
    // vulkan stuff
    VulkanStuff vulkanStuff;
 
-   VDeleter<VkDebugReportCallbackEXT> callback{ vulkanStuff.instance, DestroyDebugReportCallbackEXT };
+   VkDebugReportCallbackEXT callback;
    
    // TODO: move texture to the mesh?
    Mesh *mesh;
@@ -91,28 +90,31 @@ private:
    VulkanShader vertShader;
    VulkanShader fragShader;
 
-   VDeleter<VkDescriptorSetLayout> descriptorSetLayout{ vulkanStuff.device, vkDestroyDescriptorSetLayout };
+   VkDescriptorSetLayout descriptorSetLayoutMatrixBuffer;
+   VkDescriptorSetLayout descriptorSetLayoutSampler;
 
-   VDeleter<VkPipelineLayout> pipelineLayout{ vulkanStuff.device, vkDestroyPipelineLayout };
+   VkPipelineLayout pipelineLayout;
 
-   VDeleter<VkRenderPass> renderPass{ vulkanStuff.device, vkDestroyRenderPass };
+   VkRenderPass renderPass;
 
-   VDeleter<VkPipeline> graphicsPipeline{ vulkanStuff.device, vkDestroyPipeline };
+   VkPipeline graphicsPipeline;
 
-   std::vector<VDeleter<VkFramebuffer>> swapChainFrameBuffers;
+   std::vector<VkFramebuffer> swapChainFrameBuffers;
 
    
-   VDeleter<VkSemaphore> imageAvailableSemaphore{ vulkanStuff.device, vkDestroySemaphore };
-   VDeleter<VkSemaphore> renderFinishedSemaphore{ vulkanStuff.device, vkDestroySemaphore };
+   VkSemaphore imageAvailableSemaphore;
+   VkSemaphore renderFinishedSemaphore;
 
    Camera camera;
 
-   VDeleter<VkImage> depthImage{ vulkanStuff.device, vkDestroyImage };
-   VDeleter<VkDeviceMemory> depthImageMemory{ vulkanStuff.device, vkFreeMemory };
-   VDeleter<VkImageView> depthImageView{ vulkanStuff.device, vkDestroyImageView };
+   VkImage depthImage;
+   VkDeviceMemory depthImageMemory;
+   VkImageView depthImageView;
 
-   VDeleter<VkDescriptorPool> descriptorPool{ vulkanStuff.device, vkDestroyDescriptorPool };
-   std::vector<VkDescriptorSet> descriptorSet; // TODO: This should be moved to a mesh class or something like that.
+   VkDescriptorPool descriptorPool;
+
+   VkDescriptorSet descriptorSetMatrixBuffer;
+   std::vector<VkDescriptorSet> descriptorSetSampler;
 
    VkViewport viewport ={};
 
@@ -193,7 +195,7 @@ private:
    bool checkDeviceExtensionSupport(VkPhysicalDevice);
 
    //swap chain stuff
-   VDeleter<VkSwapchainKHR> swapChain{ vulkanStuff.device, vkDestroySwapchainKHR };
+   VkSwapchainKHR swapChain;
    std::vector<VkImage> swapChainImages;
    VkFormat swapChainImageFormat;
    VkExtent2D swapChainExtent;
@@ -209,7 +211,7 @@ private:
    VkExtent2D chooseSwapExtent(const VkSurfaceCapabilitiesKHR&);
 
    //image views
-   std::vector<VDeleter<VkImageView>> swapChainImageViews;
+   std::vector<VkImageView> swapChainImageViews;
 
    void createImageViews();
 

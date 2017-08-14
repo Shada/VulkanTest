@@ -13,7 +13,6 @@
 #include <array>
 #include <chrono>
 
-#include "VDeleter.h"
 
 const std::string MODEL_PATH_CUBE = "models/cube.obj";
 
@@ -23,15 +22,18 @@ const std::string MODEL_PATH_STORMTROOPER = "models/stormtrooper.obj";
 const std::string TEXTURE_PATH_STORMTROOPER = "textures/stormtrooper_D.tga";
 
 // somewhere else.. Vulkan_helper_stuff.h?
+// TODO: we now have VulkanDevice, which will replace most of this.
+// Might want to have another structure for other VulkanApplication related things, like the queues
+// and command buffers, swapchains ? maybe, just maybe.. we'll see how we do that.. 
 struct VulkanStuff
 {
-   VDeleter<VkInstance> instance{ vkDestroyInstance };
+   VkInstance instance;
    VkPhysicalDevice physicalDevice;
    VkQueue graphicsQueue;
    VkQueue presentQueue;
-   VDeleter<VkDevice> device{ vkDestroyDevice };
-   VDeleter<VkSurfaceKHR> surface{ instance, vkDestroySurfaceKHR };
-   VDeleter<VkCommandPool> commandPool{ device, vkDestroyCommandPool };
+   VkDevice device;
+   VkSurfaceKHR surface;
+   VkCommandPool commandPool;
    std::vector<VkCommandBuffer> commandBuffers;
 
    VkPhysicalDeviceProperties deviceProperties;

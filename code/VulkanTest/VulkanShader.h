@@ -13,7 +13,7 @@ class VulkanShader
 public:
 	void loadShader(const std::string& filename);
 
-	void createShaderModule(VDeleter<VkDevice>& device);
+	void createShaderModule(VkDevice& device);
 
 	VkPipelineShaderStageCreateInfo createShaderStage(ShaderType);
 
@@ -23,5 +23,5 @@ private:
 
 	std::string filename;
 
-	std::vector<VDeleter<VkShaderModule>> shaderModule;
+	VkShaderModule shaderModule;
 };

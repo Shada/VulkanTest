@@ -3,7 +3,7 @@
 #include <map>
 #include <vector>
 
-// have the dynamic buffer here
+// have the dynamic buffer here ?
 // wont actually fill it, just storage.
 
 class WorldObjectToMeshMapper
@@ -20,6 +20,5 @@ public:
 private:
 
    std::map<int, std::vector<int>> meshObjectMap;
-  // std::vector<std::vector<int>> meshObjectVector;
 };
 

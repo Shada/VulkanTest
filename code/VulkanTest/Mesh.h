@@ -3,6 +3,9 @@
 #include <vulkan\vulkan.hpp>
 #include <tiny_obj_loader.h>
 #include <string>
+#include <map>
+
+#include "VulkanHelpers.hpp"
 
 #include "stdafx.h"
 #include "Texture.h"
@@ -102,26 +105,23 @@ struct VulkanDescriptor
    // This should be less hard coded. like send in an array of layout bindings
    void createDescriptorSetLayout()
    {
-      VkDescriptorSetLayoutBinding uboLayoutBinding ={};
-      uboLayoutBinding.binding            = 0;
-      uboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-      uboLayoutBinding.descriptorCount    = 1;
-      uboLayoutBinding.pImmutableSamplers = nullptr;
-      uboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+      VkDescriptorSetLayoutBinding uboLayoutBinding =
+         vulkan::initialisers::createDescriptorSetLayoutBinding(
+            0,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+            VK_SHADER_STAGE_VERTEX_BIT);
 
-      VkDescriptorSetLayoutBinding dynamicUboLayoutBinding ={};
-      dynamicUboLayoutBinding.binding            = 1;
-      dynamicUboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-      dynamicUboLayoutBinding.descriptorCount    = 1;
-      dynamicUboLayoutBinding.pImmutableSamplers = nullptr;
-      dynamicUboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+      VkDescriptorSetLayoutBinding dynamicUboLayoutBinding =
+         vulkan::initialisers::createDescriptorSetLayoutBinding(
+            1,
+            VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+            VK_SHADER_STAGE_VERTEX_BIT);
 
-      VkDescriptorSetLayoutBinding samplerLayoutBinding ={};
-      samplerLayoutBinding.binding            = 2;
-      samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-      samplerLayoutBinding.descriptorCount    = 1;
-      samplerLayoutBinding.pImmutableSamplers = nullptr;
-      samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
+      VkDescriptorSetLayoutBinding samplerLayoutBinding =
+         vulkan::initialisers::createDescriptorSetLayoutBinding(
+            2,
+            VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+            VK_SHADER_STAGE_FRAGMENT_BIT);
 
       std::vector<VkDescriptorSetLayoutBinding> bindings =
       {
@@ -171,12 +171,38 @@ struct VulkanDescriptor
 
 class Mesh
 {
+private:
+   struct VertexData
+   {
+      std::vector<Vertex> vertices;
+      std::vector<uint32_t> indices;
+   };
+
+   struct SubMesh
+   {
+      int32_t startIndex = -1;
+      int32_t numberOfIndices = 0;
+      int32_t materialId = -1;
+      int32_t meshId = -1; // not needed, but might keep it for now.
+      int32_t descriptorSetId = -1;
+   };
+
+   struct Material
+   {
+      int32_t diffuseTextureId = -1;
+      int32_t specularTextureId = -1;
+      int32_t bumpTextureId = -1;
+      glm::vec3 diffuseColour;
+      glm::vec3 specularColour;
+      glm::vec3 ambientColour;
+   };
+
 public:
    Mesh(const VulkanStuff* vulkanStuff);
    ~Mesh();
 
    // TODO: do so we can send in one or more objects? currently only one at a time
-   void loadMesh(const char* fileNames); 
+   void loadMesh(const char* fileNames);
 
    void draw(int commandBufferIndex);
 
@@ -195,40 +221,21 @@ public:
       return static_cast<uint32_t>(vertexData[index].indices.size());
    }
 
+   std::vector<SubMesh> getSubMeshesForMesh(uint32_t meshId)
+   {
+      return subMeshMap[meshId];
+   }
+
    uint32_t getNumberOfMeshes()
    {
-      return static_cast<uint32_t>(modelName.size());
+      return numberOfMeshes;
    }
 
 private:
-   
+
    void createVertexBuffer();
    void createIndexBuffer();
 
-   struct VertexData
-   {
-      std::vector<Vertex> vertices;
-      std::vector<uint32_t> indices;
-   };
-
-   struct SubMesh
-   {
-      int32_t startIndex = -1;
-      int32_t numberOfIndices = 0;
-      int32_t materialId = -1;
-      int32_t meshId = -1;
-      int32_t descriptorSetId = -1;
-   };
-
-   struct Material
-   {
-      int32_t diffuseTextureId = -1;
-      int32_t specularTextureId = -1;
-      int32_t bumpTextureId = -1;
-      glm::vec3 diffuseColour;
-      glm::vec3 specularColour;
-      glm::vec3 ambientColour;
-   };
 
    const VulkanStuff* vulkanStuff;
 
@@ -236,13 +243,16 @@ private:
 
    std::vector<Material> material;
 
+
    // TODO: create struct/class that handles buffers. All types of buffers. 
    std::vector<VkBuffer> vertexBuffer;
    std::vector<VkDeviceMemory> vertexBufferMemory;
    std::vector<VkBuffer> indexBuffer;
    std::vector<VkDeviceMemory> indexBufferMemory;
 
-   std::vector<SubMesh> subMesh;
+   std::map<int, std::vector<SubMesh>> subMeshMap;
+
+   uint32_t numberOfMeshes = 0;
 
    VulkanDescriptor *descriptor;
 
@@ -258,7 +268,7 @@ private:
 
    inline void extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& attrib, tinyobj::index_t& index);
 
-// TODO: Should be in Buffer class
+   // TODO: Should be in Buffer class
    void createBuffer(
       VkDeviceSize size,
       VkBufferUsageFlags usage,

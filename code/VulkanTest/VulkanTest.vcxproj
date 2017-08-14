@@ -33,7 +33,8 @@
     <ClInclude Include="Mesh.h" />
     <ClInclude Include="stdafx.h" />
     <ClInclude Include="Texture.h" />
-    <ClInclude Include="VDeleter.h" />
+    <ClInclude Include="VulkanDevice.hpp" />
+    <ClInclude Include="VulkanHelpers.hpp" />
     <ClInclude Include="VulkanShader.h" />
     <ClInclude Include="VulkanTestApplication.h" />
     <ClInclude Include="WorldObject.h" />

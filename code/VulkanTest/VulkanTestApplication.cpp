@@ -93,7 +93,7 @@ void HelloTriangleApplication::initVulkan()
    texture = new Texture(&vulkanStuff);
 
    worldObjectToMeshMapper = new WorldObjectToMeshMapper();
-   worldObject = new WorldObject(worldObjectToMeshMapper);
+   worldObject = new WorldObject(worldObjectToMeshMapper, &vulkanStuff);
 
    createInstance();
    setupDebugCallback();
@@ -238,7 +238,7 @@ void HelloTriangleApplication::createLogicalDevice()
       createInfo.enabledLayerCount = 0;
    }
 
-   if(vkCreateDevice(vulkanStuff.physicalDevice, &createInfo, nullptr, vulkanStuff.device.replace()) != VK_SUCCESS)
+   if(vkCreateDevice(vulkanStuff.physicalDevice, &createInfo, nullptr, &vulkanStuff.device) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create logical device");
    }
@@ -301,7 +301,7 @@ void HelloTriangleApplication::createRenderPass()
    renderPassInfo.dependencyCount = 1;
    renderPassInfo.pDependencies   = &dependency;
 
-   if(vkCreateRenderPass(vulkanStuff.device, &renderPassInfo, nullptr, renderPass.replace()) != VK_SUCCESS)
+   if(vkCreateRenderPass(vulkanStuff.device, &renderPassInfo, nullptr, &renderPass) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create render pass");
    }
@@ -309,42 +309,56 @@ void HelloTriangleApplication::createRenderPass()
 
 void HelloTriangleApplication::createDescriptorSetLayout()
 {
-   VkDescriptorSetLayoutBinding uboLayoutBinding ={};
-   uboLayoutBinding.binding            = 0;
-   uboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   uboLayoutBinding.descriptorCount    = 1;
-   uboLayoutBinding.pImmutableSamplers = nullptr;
-   uboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+   worldObject->createDescriptorSetLayout();
+   VkDescriptorSetLayoutBinding uboLayoutBindingMatrix =
+      vulkan::initialisers::createDescriptorSetLayoutBinding(
+         0,
+         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
+         VK_SHADER_STAGE_VERTEX_BIT);
 
-   VkDescriptorSetLayoutBinding dynamicUboLayoutBinding ={};
-   dynamicUboLayoutBinding.binding            = 1;
-   dynamicUboLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   dynamicUboLayoutBinding.descriptorCount    = 1;
-   dynamicUboLayoutBinding.pImmutableSamplers = nullptr;
-   dynamicUboLayoutBinding.stageFlags         = VK_SHADER_STAGE_VERTEX_BIT;
+   VkDescriptorSetLayoutBinding dynamicUboLayoutBindingMatrix =
+      vulkan::initialisers::createDescriptorSetLayoutBinding(
+         1, 
+         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 
+         VK_SHADER_STAGE_VERTEX_BIT);
 
-   VkDescriptorSetLayoutBinding samplerLayoutBinding ={};
-   samplerLayoutBinding.binding            = 2;
-   samplerLayoutBinding.descriptorType     = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   samplerLayoutBinding.descriptorCount    = 1;
-   samplerLayoutBinding.pImmutableSamplers = nullptr;
-   samplerLayoutBinding.stageFlags         = VK_SHADER_STAGE_FRAGMENT_BIT;
-
-   std::vector<VkDescriptorSetLayoutBinding> bindings =
+   std::vector<VkDescriptorSetLayoutBinding> bindingsMatrix =
    {
-      uboLayoutBinding,
-      dynamicUboLayoutBinding,
-      samplerLayoutBinding
+      uboLayoutBindingMatrix,
+      dynamicUboLayoutBindingMatrix
    };
 
-   VkDescriptorSetLayoutCreateInfo layoutInfo ={};
-   layoutInfo.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
-   layoutInfo.pBindings    = bindings.data();
 
-   if(vkCreateDescriptorSetLayout(vulkanStuff.device, &layoutInfo, nullptr, descriptorSetLayout.replace()) != VK_SUCCESS)
+   VkDescriptorSetLayoutCreateInfo layoutInfoMatrix ={};
+   layoutInfoMatrix.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+   layoutInfoMatrix.bindingCount = static_cast<uint32_t>(bindingsMatrix.size());
+   layoutInfoMatrix.pBindings    = bindingsMatrix.data();
+
+   if(vkCreateDescriptorSetLayout(vulkanStuff.device, &layoutInfoMatrix, nullptr, &descriptorSetLayoutMatrixBuffer) != VK_SUCCESS)
    {
-      throw std::runtime_error("failed to create descriptor set layout!");
+      throw std::runtime_error("failed to create Matrix Buffer descriptor set layout!");
+   }
+
+
+   VkDescriptorSetLayoutBinding samplerLayoutBindingSampler =
+      vulkan::initialisers::createDescriptorSetLayoutBinding(
+         2,
+         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+         VK_SHADER_STAGE_FRAGMENT_BIT);
+
+   std::vector<VkDescriptorSetLayoutBinding> bindingsSampler=
+   {
+      samplerLayoutBindingSampler
+   };
+
+   VkDescriptorSetLayoutCreateInfo layoutInfoSampler ={};
+   layoutInfoSampler.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
+   layoutInfoSampler.bindingCount = static_cast<uint32_t>(bindingsSampler.size());
+   layoutInfoSampler.pBindings    = bindingsSampler.data();
+
+   if(vkCreateDescriptorSetLayout(vulkanStuff.device, &layoutInfoSampler, nullptr, &descriptorSetLayoutSampler) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to create Sampler descriptor set layout!");
    }
 }
 
@@ -464,14 +478,20 @@ void HelloTriangleApplication::createGraphicsPipeline()
    dynamicState.dynamicStateCount = 2;
    dynamicState.pDynamicStates    = dynamicStates;
 
+   std::vector<VkDescriptorSetLayout> descriptorSetLayouts =
+   {
+      descriptorSetLayoutMatrixBuffer,
+      descriptorSetLayoutSampler
+   };
+
    VkPipelineLayoutCreateInfo pipelineLayoutInfo ={};
    pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-   pipelineLayoutInfo.setLayoutCount         = 1;
-   pipelineLayoutInfo.pSetLayouts            = &descriptorSetLayout;
+   pipelineLayoutInfo.setLayoutCount         = 2;
+   pipelineLayoutInfo.pSetLayouts            = descriptorSetLayouts.data();
    pipelineLayoutInfo.pushConstantRangeCount = 0;
    pipelineLayoutInfo.pPushConstantRanges    = nullptr;
 
-   if(vkCreatePipelineLayout(vulkanStuff.device, &pipelineLayoutInfo, nullptr, pipelineLayout.replace()) != VK_SUCCESS)
+   if(vkCreatePipelineLayout(vulkanStuff.device, &pipelineLayoutInfo, nullptr, &pipelineLayout) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create pipeline layout!");
    }
@@ -494,7 +514,7 @@ void HelloTriangleApplication::createGraphicsPipeline()
    pipelineInfo.basePipelineHandle  = VK_NULL_HANDLE;
    pipelineInfo.basePipelineIndex   = -1;
 
-   if(vkCreateGraphicsPipelines(vulkanStuff.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, graphicsPipeline.replace()) != VK_SUCCESS)
+   if(vkCreateGraphicsPipelines(vulkanStuff.device, VK_NULL_HANDLE, 1, &pipelineInfo, nullptr, &graphicsPipeline) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create graphics pipeline");
    }
@@ -502,7 +522,7 @@ void HelloTriangleApplication::createGraphicsPipeline()
 
 void HelloTriangleApplication::createFrameBuffers()
 {
-   swapChainFrameBuffers.resize(swapChainImageViews.size(), VDeleter<VkFramebuffer>{vulkanStuff.device, vkDestroyFramebuffer});
+   swapChainFrameBuffers.resize(swapChainImageViews.size());
 
    for(size_t i = 0; i < swapChainImageViews.size(); i++)
    {
@@ -521,7 +541,7 @@ void HelloTriangleApplication::createFrameBuffers()
       framebufferInfo.height          = swapChainExtent.height;
       framebufferInfo.layers          = 1;
 
-      if(vkCreateFramebuffer(vulkanStuff.device, &framebufferInfo, nullptr, swapChainFrameBuffers[i].replace()) != VK_SUCCESS)
+      if(vkCreateFramebuffer(vulkanStuff.device, &framebufferInfo, nullptr, &swapChainFrameBuffers[i]) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to create framebuffer!");
       }
@@ -537,7 +557,7 @@ void HelloTriangleApplication::createCommandPool()
    poolInfo.queueFamilyIndex = queueFamilyIndices.graphicsFamily;
    poolInfo.flags            = 0;
 
-   if(vkCreateCommandPool(vulkanStuff.device, &poolInfo, nullptr, vulkanStuff.commandPool.replace()) != VK_SUCCESS)
+   if(vkCreateCommandPool(vulkanStuff.device, &poolInfo, nullptr, &vulkanStuff.commandPool) != VK_SUCCESS)
    {
       throw std::runtime_error("faile to create command pool!");
    }
@@ -553,8 +573,8 @@ void HelloTriangleApplication::createDepthResources()
       VK_IMAGE_TILING_OPTIMAL,
       VK_IMAGE_USAGE_DEPTH_STENCIL_ATTACHMENT_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
-      depthImage.replace(),
-      depthImageMemory.replace()
+      &depthImage,
+      &depthImageMemory
    );
 
    depthImageView = createImageView(depthImage, depthFormat, VK_IMAGE_ASPECT_DEPTH_BIT);
@@ -710,78 +730,151 @@ void HelloTriangleApplication::createDescriptorPool()
    poolInfo.pPoolSizes    = poolSizes.data();
    poolInfo.maxSets       = 200;
 
-   if(vkCreateDescriptorPool(vulkanStuff.device, &poolInfo, nullptr, descriptorPool.replace()) != VK_SUCCESS)
+   if(vkCreateDescriptorPool(vulkanStuff.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create descriptor pool!");
    }
+
+   worldObject->createDescriptorPool();
 }
 
 // TODO: This should be moved in together with the Mesh/object. I think.. The only issue is the camera buffer.. But I can probably have a pointer in there somehow. Since I still need to do collision detection.
 void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 {
+   worldObject->createDescriptorSet();
    VkDescriptorSet tempDescriptor;
-   VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
-
-   VkDescriptorSetAllocateInfo allocInfo ={};
-   allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   allocInfo.descriptorPool     = descriptorPool;
-   allocInfo.descriptorSetCount = 1;
-   allocInfo.pSetLayouts        = layouts;
-
-   if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to allocate descriptor set!");
-   }
-
+   //VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
+   //
+   //VkDescriptorSetAllocateInfo allocInfo ={};
+   //allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   //allocInfo.descriptorPool     = descriptorPool;
+   //allocInfo.descriptorSetCount = 1;
+   //allocInfo.pSetLayouts        = layouts;
+   //
+   //if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
+   //{
+   //   throw std::runtime_error("failed to allocate descriptor set!");
+   //}
+   //
    VkDescriptorBufferInfo uboBufferInfo ={};
    uboBufferInfo.buffer = uniformBuffers.cameraBuffer;
    uboBufferInfo.offset = 0;
    uboBufferInfo.range  = VK_WHOLE_SIZE;
-
+   
    VkDescriptorBufferInfo dynamicBufferInfo ={};
    dynamicBufferInfo.buffer = uniformBuffers.dynamicBuffer;
    dynamicBufferInfo.offset = 0;
    dynamicBufferInfo.range  = VK_WHOLE_SIZE;
-
+   
    VkDescriptorImageInfo imageSamplerInfo ={};
    imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    imageSamplerInfo.imageView   = texture->getImageView(textureIndex);
    imageSamplerInfo.sampler     = texture->getSampler(textureIndex);
+   //
+   //std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
+   //descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   //descriptorWrites[0].dstSet           = tempDescriptor;
+   //descriptorWrites[0].dstBinding       = 0;
+   //descriptorWrites[0].dstArrayElement  = 0;
+   //descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   //descriptorWrites[0].descriptorCount  = 1;
+   //descriptorWrites[0].pBufferInfo      = &uboBufferInfo;
+   //descriptorWrites[0].pImageInfo       = nullptr;
+   //descriptorWrites[0].pTexelBufferView = nullptr;
+   //
+   //descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   //descriptorWrites[1].dstSet           = tempDescriptor;
+   //descriptorWrites[1].dstBinding       = 1;
+   //descriptorWrites[1].dstArrayElement  = 0;
+   //descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   //descriptorWrites[1].descriptorCount  = 1;
+   //descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
+   //descriptorWrites[1].pImageInfo       = nullptr;
+   //descriptorWrites[1].pTexelBufferView = nullptr;
+   //
+   //descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   //descriptorWrites[2].dstSet           = tempDescriptor;
+   //descriptorWrites[2].dstBinding       = 2;
+   //descriptorWrites[2].dstArrayElement  = 0;
+   //descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   //descriptorWrites[2].descriptorCount  = 1;
+   //descriptorWrites[2].pBufferInfo      = nullptr;
+   //descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
+   //descriptorWrites[2].pTexelBufferView = nullptr;
+   //
+   //vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+   //
+   //descriptorSet.push_back(tempDescriptor);
 
-   std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
-   descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[0].dstSet           = tempDescriptor;
-   descriptorWrites[0].dstBinding       = 0;
-   descriptorWrites[0].dstArrayElement  = 0;
-   descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   descriptorWrites[0].descriptorCount  = 1;
-   descriptorWrites[0].pBufferInfo      = &uboBufferInfo;
-   descriptorWrites[0].pImageInfo       = nullptr;
-   descriptorWrites[0].pTexelBufferView = nullptr;
 
-   descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[1].dstSet           = tempDescriptor;
-   descriptorWrites[1].dstBinding       = 1;
-   descriptorWrites[1].dstArrayElement  = 0;
-   descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   descriptorWrites[1].descriptorCount  = 1;
-   descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
-   descriptorWrites[1].pImageInfo       = nullptr;
-   descriptorWrites[1].pTexelBufferView = nullptr;
 
-   descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[2].dstSet           = tempDescriptor;
-   descriptorWrites[2].dstBinding       = 2;
-   descriptorWrites[2].dstArrayElement  = 0;
-   descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   descriptorWrites[2].descriptorCount  = 1;
-   descriptorWrites[2].pBufferInfo      = nullptr;
-   descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
-   descriptorWrites[2].pTexelBufferView = nullptr;
 
-   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+   VkDescriptorSetLayout layoutsMatrixBuffer[] ={ descriptorSetLayoutMatrixBuffer };
 
-   descriptorSet.push_back(tempDescriptor);
+   VkDescriptorSetAllocateInfo allocInfoMatrixBuffer ={};
+   allocInfoMatrixBuffer.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   allocInfoMatrixBuffer.descriptorPool     = descriptorPool;
+   allocInfoMatrixBuffer.descriptorSetCount = 1;
+   allocInfoMatrixBuffer.pSetLayouts        = layoutsMatrixBuffer;
+
+   if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfoMatrixBuffer, &descriptorSetMatrixBuffer) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to allocate MatrixBuffer descriptor set!");
+   }
+
+   std::array<VkWriteDescriptorSet, 2> descriptorWritesMatrixBuffer ={};
+   descriptorWritesMatrixBuffer[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrixBuffer[0].dstSet           = descriptorSetMatrixBuffer;
+   descriptorWritesMatrixBuffer[0].dstBinding       = 0;
+   descriptorWritesMatrixBuffer[0].dstArrayElement  = 0;
+   descriptorWritesMatrixBuffer[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   descriptorWritesMatrixBuffer[0].descriptorCount  = 1;
+   descriptorWritesMatrixBuffer[0].pBufferInfo      = &uboBufferInfo;
+   descriptorWritesMatrixBuffer[0].pImageInfo       = nullptr;
+   descriptorWritesMatrixBuffer[0].pTexelBufferView = nullptr;
+
+   descriptorWritesMatrixBuffer[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrixBuffer[1].dstSet           = descriptorSetMatrixBuffer;
+   descriptorWritesMatrixBuffer[1].dstBinding       = 1;
+   descriptorWritesMatrixBuffer[1].dstArrayElement  = 0;
+   descriptorWritesMatrixBuffer[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   descriptorWritesMatrixBuffer[1].descriptorCount  = 1;
+   descriptorWritesMatrixBuffer[1].pBufferInfo      = &dynamicBufferInfo;
+   descriptorWritesMatrixBuffer[1].pImageInfo       = nullptr;
+   descriptorWritesMatrixBuffer[1].pTexelBufferView = nullptr;
+
+   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWritesMatrixBuffer.size()), descriptorWritesMatrixBuffer.data(), 0, nullptr);
+
+
+
+   
+   VkDescriptorSetAllocateInfo allocInfoSampler ={};
+   allocInfoSampler.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+   allocInfoSampler.descriptorPool     = descriptorPool;
+   allocInfoSampler.descriptorSetCount = 1;
+   allocInfoSampler.pSetLayouts        = &descriptorSetLayoutSampler;
+
+   if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfoSampler, &tempDescriptor) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to allocate Sampler descriptor set!");
+   }
+
+   std::array<VkWriteDescriptorSet, 1> descriptorWritesSampler ={};
+
+   descriptorWritesSampler[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesSampler[0].dstSet           = tempDescriptor;
+   descriptorWritesSampler[0].dstBinding       = 2;
+   descriptorWritesSampler[0].dstArrayElement  = 0;
+   descriptorWritesSampler[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   descriptorWritesSampler[0].descriptorCount  = 1;
+   descriptorWritesSampler[0].pBufferInfo      = nullptr;
+   descriptorWritesSampler[0].pImageInfo       = &imageSamplerInfo;
+   descriptorWritesSampler[0].pTexelBufferView = nullptr;
+
+   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWritesSampler.size()), descriptorWritesSampler.data(), 0, nullptr);
+
+   descriptorSetSampler.push_back(tempDescriptor);
+
 }
 void HelloTriangleApplication::updateDescriptorSet(int index)
 {
@@ -796,43 +889,31 @@ void HelloTriangleApplication::updateDescriptorSet(int index)
    dynamicBufferInfo.offset = 0;
    dynamicBufferInfo.range  = VK_WHOLE_SIZE;
 
-   VkDescriptorImageInfo imageSamplerInfo ={};
-   imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   imageSamplerInfo.imageView   = texture->getImageView(0);
-   imageSamplerInfo.sampler     = texture->getSampler(0);
 
-   std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
-   descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[0].dstSet           = descriptorSet[index];
-   descriptorWrites[0].dstBinding       = 0;
-   descriptorWrites[0].dstArrayElement  = 0;
-   descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   descriptorWrites[0].descriptorCount  = 1;
-   descriptorWrites[0].pBufferInfo      = &uboBufferInfo;
-   descriptorWrites[0].pImageInfo       = nullptr;
-   descriptorWrites[0].pTexelBufferView = nullptr;
+   std::array<VkWriteDescriptorSet, 2> descriptorWritesMatrix ={};
+   descriptorWritesMatrix[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrix[0].dstSet           = descriptorSetMatrixBuffer;
+   descriptorWritesMatrix[0].dstBinding       = 0;
+   descriptorWritesMatrix[0].dstArrayElement  = 0;
+   descriptorWritesMatrix[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
+   descriptorWritesMatrix[0].descriptorCount  = 1;
+   descriptorWritesMatrix[0].pBufferInfo      = &uboBufferInfo;
+   descriptorWritesMatrix[0].pImageInfo       = nullptr;
+   descriptorWritesMatrix[0].pTexelBufferView = nullptr;
 
-   descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[1].dstSet           = descriptorSet[index];
-   descriptorWrites[1].dstBinding       = 1;
-   descriptorWrites[1].dstArrayElement  = 0;
-   descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   descriptorWrites[1].descriptorCount  = 1;
-   descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
-   descriptorWrites[1].pImageInfo       = nullptr;
-   descriptorWrites[1].pTexelBufferView = nullptr;
+   descriptorWritesMatrix[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrix[1].dstSet           = descriptorSetMatrixBuffer;
+   descriptorWritesMatrix[1].dstBinding       = 1;
+   descriptorWritesMatrix[1].dstArrayElement  = 0;
+   descriptorWritesMatrix[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   descriptorWritesMatrix[1].descriptorCount  = 1;
+   descriptorWritesMatrix[1].pBufferInfo      = &dynamicBufferInfo;
+   descriptorWritesMatrix[1].pImageInfo       = nullptr;
+   descriptorWritesMatrix[1].pTexelBufferView = nullptr;
 
-   descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWrites[2].dstSet           = descriptorSet[index];
-   descriptorWrites[2].dstBinding       = 2;
-   descriptorWrites[2].dstArrayElement  = 0;
-   descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   descriptorWrites[2].descriptorCount  = 1;
-   descriptorWrites[2].pBufferInfo      = nullptr;
-   descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
-   descriptorWrites[2].pTexelBufferView = nullptr;
 
-   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWritesMatrix.size()), descriptorWritesMatrix.data(), 0, nullptr);
+
 }
 void HelloTriangleApplication::createBuffer(
    VkDeviceSize size,
@@ -957,10 +1038,29 @@ void HelloTriangleApplication::createCommandBuffers()
 
          uint32_t dynamicOffset = j * static_cast<uint32_t>(dynamicAlignment);
 
-         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSet[meshId], 1, &dynamicOffset);
-
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSetMatrixBuffer, 1, &dynamicOffset);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSetSampler[meshId], 0, nullptr);
+         
          vkCmdDrawIndexed(vulkanStuff.commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
       }
+
+
+      // new draw procedure for when descriptors have been fixed
+
+      //for(uint32_t j=0; j < mesh->getNumberOfMeshes(); j++)
+      //{
+      //   // bind vertex and index buffers here
+      //   for(uint32_t k=0; k < worldObjectToMeshMapper->getWorldObjectIdsForMesh(j).size(); k++)
+      //   {
+      //      // calculate dynamic offset here or set uniform buffer here, by binding a descriptor from the descriptorset
+      //      for(uint32_t l = 0; l < mesh->getSubMeshesForMesh(j).size(); l++)
+      //      {
+      //         // bind descriptor set here or bind the part with textures 
+      //
+      //         // draw indexed using the submesh data to get start index and num indices
+      //      }
+      //   }
+      //}
 
       vkCmdEndRenderPass(vulkanStuff.commandBuffers[i]);
 
@@ -976,8 +1076,8 @@ void HelloTriangleApplication::createSemaphores()
    VkSemaphoreCreateInfo semaphoreInfo ={};
    semaphoreInfo.sType = VK_STRUCTURE_TYPE_SEMAPHORE_CREATE_INFO;
 
-   if(vkCreateSemaphore(vulkanStuff.device, &semaphoreInfo, nullptr, imageAvailableSemaphore.replace()) != VK_SUCCESS ||
-      vkCreateSemaphore(vulkanStuff.device, &semaphoreInfo, nullptr, renderFinishedSemaphore.replace()) != VK_SUCCESS)
+   if(vkCreateSemaphore(vulkanStuff.device, &semaphoreInfo, nullptr, &imageAvailableSemaphore) != VK_SUCCESS ||
+      vkCreateSemaphore(vulkanStuff.device, &semaphoreInfo, nullptr, &renderFinishedSemaphore) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create semaphores!");
    }
@@ -1169,7 +1269,7 @@ void HelloTriangleApplication::recreateSwapChain()
 
 void HelloTriangleApplication::createImageViews()
 {
-   swapChainImageViews.resize(swapChainImages.size(), VDeleter<VkImageView>{vulkanStuff.device, vkDestroyImageView});
+   swapChainImageViews.resize(swapChainImages.size());
 
    for(uint32_t i = 0; i < swapChainImages.size(); i++)
    {
@@ -1237,7 +1337,7 @@ void HelloTriangleApplication::createSwapChain()
    createInfo.clipped        = VK_TRUE;
    createInfo.oldSwapchain   = VK_NULL_HANDLE;
 
-   if(vkCreateSwapchainKHR(vulkanStuff.device, &createInfo, nullptr, swapChain.replace()) != VK_SUCCESS)
+   if(vkCreateSwapchainKHR(vulkanStuff.device, &createInfo, nullptr, &swapChain) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create swap chain!");
    }
@@ -1564,7 +1664,7 @@ void HelloTriangleApplication::createInstance()
       createInfo.enabledLayerCount = 0;
    }
 
-   if(vkCreateInstance(&createInfo, nullptr, vulkanStuff.instance.replace()) != VK_SUCCESS)
+   if(vkCreateInstance(&createInfo, nullptr, &vulkanStuff.instance) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create instance!");
    }
@@ -1579,7 +1679,7 @@ void HelloTriangleApplication::setupDebugCallback()
    createInfo.flags       = VK_DEBUG_REPORT_ERROR_BIT_EXT | VK_DEBUG_REPORT_WARNING_BIT_EXT;
    createInfo.pfnCallback = debugCallback;
 
-   if(CreateDebugReportCallbackEXT(vulkanStuff.instance, &createInfo, nullptr, callback.replace()) != VK_SUCCESS)
+   if(CreateDebugReportCallbackEXT(vulkanStuff.instance, &createInfo, nullptr, &callback) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to set up debug callback!");
    }
@@ -1587,7 +1687,7 @@ void HelloTriangleApplication::setupDebugCallback()
 
 void HelloTriangleApplication::createSurface()
 {
-   if(glfwCreateWindowSurface(vulkanStuff.instance, window, nullptr, vulkanStuff.surface.replace()) != VK_SUCCESS)
+   if(glfwCreateWindowSurface(vulkanStuff.instance, window, nullptr, &vulkanStuff.surface) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create window surface!");
    }

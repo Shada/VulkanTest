@@ -114,7 +114,7 @@ void Mesh::loadMesh(const char* fileName)
    {
       if(tSubMesh.numberOfIndices > 0)
       {
-         subMesh.push_back(tSubMesh);
+         subMeshMap[numberOfMeshes].push_back(tSubMesh);
       }
    }
 
@@ -124,6 +124,8 @@ void Mesh::loadMesh(const char* fileName)
    createIndexBuffer();
 
    modelName.push_back(fileName);
+
+   numberOfMeshes++;
 }
 
 void Mesh::draw(int commandBufferIndex)
