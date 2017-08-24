@@ -14,8 +14,8 @@ WorldObject::WorldObject(WorldObjectToMeshMapper *worldObjectToMeshMapper, const
 
 WorldObject::~WorldObject()
 {
-   vkDestroyBuffer(vulkanStuff->device, worldMatrixUBO, nullptr);
-   vkFreeMemory(vulkanStuff->device, worldMatrixUBOMemory, nullptr);
+   vkDestroyBuffer(vulkanStuff->device, worldMatrixUBO.buffer, nullptr);
+   vkFreeMemory(vulkanStuff->device, worldMatrixUBO.memory, nullptr);
 
    vkDestroyDescriptorSetLayout(vulkanStuff->device, descriptorSetLayout, nullptr);
 }
@@ -57,6 +57,8 @@ void WorldObject::updateModelMatrix()
          modelMatrix[i] = glm::scale(modelMatrix[i], scale[i]);
       }
    }
+
+   updateDynamicUniformBuffer();
 }
 
 void WorldObject::createDescriptorPool()
@@ -91,7 +93,9 @@ void WorldObject::createDescriptorSetLayout()
 
 void WorldObject::createDescriptorSet()
 {
-   return;
+   // TODO: not the responsibility of this function to do this. 
+   // We should however have a check that makes sure that UBO and descriptor pool is initialized
+   createUniformBuffer();
    createDescriptorPool();
 
    VkDescriptorSetAllocateInfo allocInfoMatrixBuffer ={};
@@ -107,7 +111,7 @@ void WorldObject::createDescriptorSet()
 
 
    VkDescriptorBufferInfo dynamicBufferInfo ={};
-   dynamicBufferInfo.buffer = worldMatrixUBO;
+   dynamicBufferInfo.buffer = worldMatrixUBO.buffer;
    dynamicBufferInfo.offset = 0;
    dynamicBufferInfo.range  = VK_WHOLE_SIZE;
 
@@ -211,4 +215,82 @@ void WorldObject::setMovingDirection(uint32_t index, glm::vec3 movingDirection)
 void WorldObject::invalidateModelMatrix(uint32_t index)
 {
    isModelMatrixInvalid[index] = true;
+}
+
+
+void WorldObject::createUniformBuffer()
+{
+   // model matrices (dynamic buffer)
+   size_t uboAlignment = (size_t)vulkanStuff->deviceProperties.limits.minUniformBufferOffsetAlignment;
+   dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
+
+   size_t bufferSize = this->getNumberOfObjects() * dynamicAlignment;
+   dynamicBufferSize = bufferSize;
+   uboDataDynamic.model = (glm::mat4*)alignedAlloc(bufferSize, dynamicAlignment);
+   assert(uboDataDynamic.model);
+
+   std::cout << "minUniformBufferOffsetAlignment = " << uboAlignment << std::endl;
+   std::cout << "dynamicAlignment = " << dynamicAlignment << std::endl;
+
+   createBuffer(
+      bufferSize,
+      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
+      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
+      &worldMatrixUBO.buffer,
+      &worldMatrixUBO.memory);
+
+   // TODO: make so map can be persistent. no need to map/unmap everytime we copy 
+   // data in dynamic buffers.
+   // in buffer class. have map() and unmap(). 
+   // in destruction check if ma
+
+
+   updateDynamicUniformBuffer();
+}
+
+void WorldObject::updateDynamicUniformBuffer()
+{
+   for(uint32_t i = 0; i < this->getNumberOfObjects(); i++)
+   {
+      glm::mat4* modelMat = (glm::mat4*)(((uint64_t)uboDataDynamic.model + (i * dynamicAlignment)));
+
+      *modelMat = this->getModelMatrix(i);
+   }
+
+   void *data;
+   vkMapMemory(vulkanStuff->device, worldMatrixUBO.memory, 0, dynamicBufferSize, 0, &data);
+
+   memcpy(data, uboDataDynamic.model, dynamicBufferSize);
+
+   VkMappedMemoryRange mappedMemoryRange{};
+   mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
+
+   mappedMemoryRange.memory = worldMatrixUBO.memory;
+   mappedMemoryRange.size = dynamicBufferSize;
+   vkFlushMappedMemoryRanges(vulkanStuff->device, 1, &mappedMemoryRange);
+
+   vkUnmapMemory(vulkanStuff->device, worldMatrixUBO.memory);
+}
+
+void WorldObject::updateDescriptorSet()
+{
+   createUniformBuffer();
+
+   VkDescriptorBufferInfo uboBufferInfo ={};
+   uboBufferInfo.buffer = worldMatrixUBO.buffer;
+   uboBufferInfo.offset = 0;
+   uboBufferInfo.range  = VK_WHOLE_SIZE;
+
+   std::array<VkWriteDescriptorSet, 1> descriptorWritesMatrix ={};
+   descriptorWritesMatrix[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+   descriptorWritesMatrix[0].dstSet           = descriptorSet;
+   descriptorWritesMatrix[0].dstBinding       = 1;
+   descriptorWritesMatrix[0].dstArrayElement  = 0;
+   descriptorWritesMatrix[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   descriptorWritesMatrix[0].descriptorCount  = 1;
+   descriptorWritesMatrix[0].pBufferInfo      = &uboBufferInfo;
+   descriptorWritesMatrix[0].pImageInfo       = nullptr;
+   descriptorWritesMatrix[0].pTexelBufferView = nullptr;
+
+   vkUpdateDescriptorSets(vulkanStuff->device, static_cast<uint32_t>(descriptorWritesMatrix.size()), descriptorWritesMatrix.data(), 0, nullptr);
 }

@@ -21,6 +21,11 @@ const std::string TEXTURE_PATH_CHALET = "textures/chalet.jpg";
 const std::string MODEL_PATH_STORMTROOPER = "models/stormtrooper.obj";
 const std::string TEXTURE_PATH_STORMTROOPER = "textures/stormtrooper_D.tga";
 
+namespace alloc
+{
+   
+};
+
 // somewhere else.. Vulkan_helper_stuff.h?
 // TODO: we now have VulkanDevice, which will replace most of this.
 // Might want to have another structure for other VulkanApplication related things, like the queues

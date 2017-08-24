@@ -6,13 +6,13 @@ out gl_PerVertex
     vec4 gl_Position;
 };
 
-layout(binding = 0) uniform UboView
+layout(set = 0, binding = 0) uniform UboView
 {
 	mat4 view;
 	mat4 proj;
 } uboView;
 
-layout (binding = 1) uniform UboInstance 
+layout(set = 1, binding = 1) uniform UboInstance 
 {
 	mat4 model; 
 } uboInstance;

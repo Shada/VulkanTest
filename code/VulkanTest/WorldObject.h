@@ -10,6 +10,8 @@
 #include "WorldObjectToMeshMapper.h"
 #include "VulkanHelpers.hpp"
 
+
+
 class WorldObject
 {
 public:
@@ -48,8 +50,49 @@ public:
 
 private:
 
+   size_t dynamicBufferSize = 0;
+   struct UboDataDynamic
+   {
+      glm::mat4 *model = nullptr;
+   } uboDataDynamic;
+
+
+   void* alignedAlloc(size_t size, size_t alignment)
+   {
+      void *data = nullptr;
+#if defined(_MSC_VER) || defined(__MINGW32__)
+      data = _aligned_malloc(size, alignment);
+#else 
+      int res = posix_memalign(&data, alignment, size);
+      if(res != 0)
+         data = nullptr;
+#endif
+      return data;
+   }
+
+   void alignedFree(void* data)
+   {
+#if	defined(_MSC_VER) || defined(__MINGW32__)
+      _aligned_free(data);
+#else 
+      free(data);
+#endif
+   }
+
+   struct
+   {
+      VkBuffer buffer;
+      VkDeviceMemory memory;
+   } worldMatrixUBO;
+
+   float animationTimer = 0.0f;
+
+   size_t dynamicAlignment;
+
    void invalidateModelMatrix(uint32_t index);
    void updateModelMatrix();
+
+   void createUniformBuffer();
 
    WorldObjectToMeshMapper* worldObjectToMeshMapper;
    const VulkanStuff* vulkanStuff;
@@ -66,8 +109,6 @@ private:
    VkDescriptorPool descriptorPool;
    VkDescriptorSetLayout descriptorSetLayout;
    VkDescriptorSet descriptorSet;
-   VkBuffer worldMatrixUBO;
-   VkDeviceMemory worldMatrixUBOMemory;
 
    // these are only for movable objects.
    // should maybe break out static objects to another class
@@ -89,19 +130,79 @@ private:
       return vulkan::initialisers::createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
    }
 
-   void updateDescriptorSet();
+   void createBuffer(
+      VkDeviceSize size,
+      VkBufferUsageFlags usage,
+      VkMemoryPropertyFlags properties,
+      VkBuffer *buffer,
+      VkDeviceMemory *bufferMemory)
+   {
+      VkBufferCreateInfo bufferInfo ={};
+      bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
+      bufferInfo.size        = size;
+      bufferInfo.usage       = usage;
+      bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
+
+      if(vkCreateBuffer(vulkanStuff->device, &bufferInfo, nullptr, buffer) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to create vertex buffer!");
+      }
+
+      VkMemoryRequirements memoryRequirements;
+      vkGetBufferMemoryRequirements(vulkanStuff->device, *buffer, &memoryRequirements);
+
+      VkMemoryAllocateInfo allocateInfo ={};
+      allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
+      allocateInfo.allocationSize  = memoryRequirements.size;
+      allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
+
+      if(vkAllocateMemory(vulkanStuff->device, &allocateInfo, nullptr, bufferMemory) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to allocate vertex buffer memory!");
+      }
+
+      vkBindBufferMemory(vulkanStuff->device, *buffer, *bufferMemory, 0);
+   }
+
+
+   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties)
+   {
+      VkPhysicalDeviceMemoryProperties memoryProperties;
+      vkGetPhysicalDeviceMemoryProperties(vulkanStuff->physicalDevice, &memoryProperties);
+
+      for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
+      {
+         if(typeFiter & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags&properties) == properties)
+         {
+            return i;
+         }
+      }
+
+      throw std::runtime_error("failed to find suitable memory type!");
+   }
+
+
 public:
    void createDescriptorSetLayout();
    void createDescriptorPool();
    void createDescriptorSet();
 
+   // TODO call this from add instance ? maybe using a boolean to say if it shall update?
+   void updateDescriptorSet();
+
+   void updateDynamicUniformBuffer();
+
    VkDescriptorSetLayout getDescriptorSetLayout()
    {
       return descriptorSetLayout;
    }
-   VkDescriptorSet getDescriptorSet()
+   VkDescriptorSet *getDescriptorSet()
    {
-      return descriptorSet;
+      return &descriptorSet;
+   }
+   size_t getDynamicAlignment()
+   {
+      return dynamicAlignment;
    }
 };
 

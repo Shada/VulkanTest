@@ -6,11 +6,13 @@
 #include "Mesh.h"
 #include "Texture.h"
 #include "WorldObject.h"
+#include "VulkanDevice.hpp"
 
 /// TODO: fix proper cleanup. currently lots of stuff that is not deleted correctly/at all
 class HelloTriangleApplication
 {
 private:
+
    // structs
    struct QueueFamilyIndices
    {
@@ -37,11 +39,6 @@ public:
 
    void recreateSwapChain();
 
-   struct UboDataDynamic
-   {
-      glm::mat4 *model = nullptr;
-   } uboDataDynamic;
-
    struct
    {
       glm::mat4 view;
@@ -53,21 +50,16 @@ public:
       //TODO: Create Buffer class that takes care of buffers creation/memory handling etc.
       VkBuffer cameraBuffer;
       VkDeviceMemory cameraBufferMemory;
-      VkBuffer dynamicBuffer;
-      VkDeviceMemory dynamicBufferMemory;
    } uniformBuffers;
 
    // TODO: move this into the mesh/object class .
    float animationTimer = 0.0f;
-
-   size_t dynamicAlignment;
 
 private:
 
    void mainLoop();
 
    void updateUniformBuffer();
-   void updateDynamicUniformBuffer();
 
    void drawFrame();
 
@@ -77,6 +69,8 @@ private:
 
    // vulkan stuff
    VulkanStuff vulkanStuff;
+
+   VulkanDevice vulkanDevice;
 
    VkDebugReportCallbackEXT callback;
    
@@ -159,8 +153,6 @@ private:
    void createDescriptorPool();
 
    void createDescriptorSet(int textureIndex);
-
-   void updateDescriptorSet(int index);
 
    void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 

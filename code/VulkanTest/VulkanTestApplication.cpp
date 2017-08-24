@@ -21,27 +21,6 @@ static VKAPI_ATTR VkBool32 VKAPI_CALL debugCallback(
    return VK_FALSE;
 }
 
-void* alignedAlloc(size_t size, size_t alignment)
-{
-   void *data = nullptr;
-#if defined(_MSC_VER) || defined(__MINGW32__)
-   data = _aligned_malloc(size, alignment);
-#else 
-   int res = posix_memalign(&data, alignment, size);
-   if(res != 0)
-      data = nullptr;
-#endif
-   return data;
-}
-
-void alignedFree(void* data)
-{
-#if	defined(_MSC_VER) || defined(__MINGW32__)
-   _aligned_free(data);
-#else 
-   free(data);
-#endif
-}
 
 void HelloTriangleApplication::run()
 {
@@ -116,14 +95,11 @@ void HelloTriangleApplication::initVulkan()
    textureIndex = createTextureImage(TEXTURE_PATH_STORMTROOPER);
    createDescriptorSet(textureIndex);
 
-
    int index = worldObject->addInstance(1, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(.3f));
    worldObject->setRotationSpeed(index, 0.0f, 0.0f, 0.0f);
 
-   createUniformBuffer();
-
-   updateDescriptorSet(0);
-   updateDescriptorSet(1);
+   // TODO: automatically call this from add instance, using a boolean: if true -> do
+   worldObject->updateDescriptorSet();
 
    createCommandBuffers();
    createSemaphores();
@@ -310,25 +286,18 @@ void HelloTriangleApplication::createRenderPass()
 void HelloTriangleApplication::createDescriptorSetLayout()
 {
    worldObject->createDescriptorSetLayout();
+   
    VkDescriptorSetLayoutBinding uboLayoutBindingMatrix =
       vulkan::initialisers::createDescriptorSetLayoutBinding(
          0,
          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
          VK_SHADER_STAGE_VERTEX_BIT);
 
-   VkDescriptorSetLayoutBinding dynamicUboLayoutBindingMatrix =
-      vulkan::initialisers::createDescriptorSetLayoutBinding(
-         1, 
-         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, 
-         VK_SHADER_STAGE_VERTEX_BIT);
-
    std::vector<VkDescriptorSetLayoutBinding> bindingsMatrix =
    {
-      uboLayoutBindingMatrix,
-      dynamicUboLayoutBindingMatrix
+      uboLayoutBindingMatrix
    };
-
-
+   
    VkDescriptorSetLayoutCreateInfo layoutInfoMatrix ={};
    layoutInfoMatrix.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
    layoutInfoMatrix.bindingCount = static_cast<uint32_t>(bindingsMatrix.size());
@@ -338,7 +307,6 @@ void HelloTriangleApplication::createDescriptorSetLayout()
    {
       throw std::runtime_error("failed to create Matrix Buffer descriptor set layout!");
    }
-
 
    VkDescriptorSetLayoutBinding samplerLayoutBindingSampler =
       vulkan::initialisers::createDescriptorSetLayoutBinding(
@@ -481,12 +449,13 @@ void HelloTriangleApplication::createGraphicsPipeline()
    std::vector<VkDescriptorSetLayout> descriptorSetLayouts =
    {
       descriptorSetLayoutMatrixBuffer,
+      worldObject->getDescriptorSetLayout(),
       descriptorSetLayoutSampler
    };
 
    VkPipelineLayoutCreateInfo pipelineLayoutInfo ={};
    pipelineLayoutInfo.sType                  = VK_STRUCTURE_TYPE_PIPELINE_LAYOUT_CREATE_INFO;
-   pipelineLayoutInfo.setLayoutCount         = 2;
+   pipelineLayoutInfo.setLayoutCount         = static_cast<uint32_t>(descriptorSetLayouts.size());
    pipelineLayoutInfo.pSetLayouts            = descriptorSetLayouts.data();
    pipelineLayoutInfo.pushConstantRangeCount = 0;
    pipelineLayoutInfo.pPushConstantRanges    = nullptr;
@@ -686,32 +655,6 @@ void HelloTriangleApplication::createUniformBuffer()
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
       &uniformBuffers.cameraBuffer,
       &uniformBuffers.cameraBufferMemory);
-
-   // model matrices (dynamic buffer)
-   size_t uboAlignment = (size_t)vulkanStuff.deviceProperties.limits.minUniformBufferOffsetAlignment;
-   dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
-
-   bufferSize = worldObject->getNumberOfObjects() * dynamicAlignment;
-   dynamicBufferSize = bufferSize;
-   uboDataDynamic.model = (glm::mat4*)alignedAlloc(bufferSize, dynamicAlignment);
-   assert(uboDataDynamic.model);
-
-   std::cout << "minUniformBufferOffsetAlignment = " << uboAlignment << std::endl;
-   std::cout << "dynamicAlignment = " << dynamicAlignment << std::endl;
-
-   createBuffer(
-      bufferSize,
-      VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
-      VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
-      &uniformBuffers.dynamicBuffer,
-      &uniformBuffers.dynamicBufferMemory);
-
-   // TODO: make so map can be persistent. no need to map/unmap everytime we copy 
-   // data in dynamic buffers.
-   // in buffer class. have map() and unmap(). 
-   // in destruction check if mapped data exists -> unpad then free memory.
-
-   updateDynamicUniformBuffer();
 }
 
 void HelloTriangleApplication::createDescriptorPool()
@@ -738,76 +681,22 @@ void HelloTriangleApplication::createDescriptorPool()
    worldObject->createDescriptorPool();
 }
 
-// TODO: This should be moved in together with the Mesh/object. I think.. The only issue is the camera buffer.. But I can probably have a pointer in there somehow. Since I still need to do collision detection.
+// TODO: These should be moved to respective class.  texture class and camera class.
 void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 {
    worldObject->createDescriptorSet();
    VkDescriptorSet tempDescriptor;
-   //VkDescriptorSetLayout layouts[] ={ descriptorSetLayout };
-   //
-   //VkDescriptorSetAllocateInfo allocInfo ={};
-   //allocInfo.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   //allocInfo.descriptorPool     = descriptorPool;
-   //allocInfo.descriptorSetCount = 1;
-   //allocInfo.pSetLayouts        = layouts;
-   //
-   //if(vkAllocateDescriptorSets(vulkanStuff.device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
-   //{
-   //   throw std::runtime_error("failed to allocate descriptor set!");
-   //}
-   //
+
    VkDescriptorBufferInfo uboBufferInfo ={};
    uboBufferInfo.buffer = uniformBuffers.cameraBuffer;
    uboBufferInfo.offset = 0;
    uboBufferInfo.range  = VK_WHOLE_SIZE;
    
-   VkDescriptorBufferInfo dynamicBufferInfo ={};
-   dynamicBufferInfo.buffer = uniformBuffers.dynamicBuffer;
-   dynamicBufferInfo.offset = 0;
-   dynamicBufferInfo.range  = VK_WHOLE_SIZE;
    
    VkDescriptorImageInfo imageSamplerInfo ={};
    imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
    imageSamplerInfo.imageView   = texture->getImageView(textureIndex);
    imageSamplerInfo.sampler     = texture->getSampler(textureIndex);
-   //
-   //std::array<VkWriteDescriptorSet, 3> descriptorWrites ={};
-   //descriptorWrites[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   //descriptorWrites[0].dstSet           = tempDescriptor;
-   //descriptorWrites[0].dstBinding       = 0;
-   //descriptorWrites[0].dstArrayElement  = 0;
-   //descriptorWrites[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   //descriptorWrites[0].descriptorCount  = 1;
-   //descriptorWrites[0].pBufferInfo      = &uboBufferInfo;
-   //descriptorWrites[0].pImageInfo       = nullptr;
-   //descriptorWrites[0].pTexelBufferView = nullptr;
-   //
-   //descriptorWrites[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   //descriptorWrites[1].dstSet           = tempDescriptor;
-   //descriptorWrites[1].dstBinding       = 1;
-   //descriptorWrites[1].dstArrayElement  = 0;
-   //descriptorWrites[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   //descriptorWrites[1].descriptorCount  = 1;
-   //descriptorWrites[1].pBufferInfo      = &dynamicBufferInfo;
-   //descriptorWrites[1].pImageInfo       = nullptr;
-   //descriptorWrites[1].pTexelBufferView = nullptr;
-   //
-   //descriptorWrites[2].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   //descriptorWrites[2].dstSet           = tempDescriptor;
-   //descriptorWrites[2].dstBinding       = 2;
-   //descriptorWrites[2].dstArrayElement  = 0;
-   //descriptorWrites[2].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   //descriptorWrites[2].descriptorCount  = 1;
-   //descriptorWrites[2].pBufferInfo      = nullptr;
-   //descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
-   //descriptorWrites[2].pTexelBufferView = nullptr;
-   //
-   //vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
-   //
-   //descriptorSet.push_back(tempDescriptor);
-
-
-
 
    VkDescriptorSetLayout layoutsMatrixBuffer[] ={ descriptorSetLayoutMatrixBuffer };
 
@@ -822,7 +711,7 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
       throw std::runtime_error("failed to allocate MatrixBuffer descriptor set!");
    }
 
-   std::array<VkWriteDescriptorSet, 2> descriptorWritesMatrixBuffer ={};
+   std::array<VkWriteDescriptorSet, 1> descriptorWritesMatrixBuffer ={};
    descriptorWritesMatrixBuffer[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
    descriptorWritesMatrixBuffer[0].dstSet           = descriptorSetMatrixBuffer;
    descriptorWritesMatrixBuffer[0].dstBinding       = 0;
@@ -832,16 +721,6 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
    descriptorWritesMatrixBuffer[0].pBufferInfo      = &uboBufferInfo;
    descriptorWritesMatrixBuffer[0].pImageInfo       = nullptr;
    descriptorWritesMatrixBuffer[0].pTexelBufferView = nullptr;
-
-   descriptorWritesMatrixBuffer[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWritesMatrixBuffer[1].dstSet           = descriptorSetMatrixBuffer;
-   descriptorWritesMatrixBuffer[1].dstBinding       = 1;
-   descriptorWritesMatrixBuffer[1].dstArrayElement  = 0;
-   descriptorWritesMatrixBuffer[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   descriptorWritesMatrixBuffer[1].descriptorCount  = 1;
-   descriptorWritesMatrixBuffer[1].pBufferInfo      = &dynamicBufferInfo;
-   descriptorWritesMatrixBuffer[1].pImageInfo       = nullptr;
-   descriptorWritesMatrixBuffer[1].pTexelBufferView = nullptr;
 
    vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWritesMatrixBuffer.size()), descriptorWritesMatrixBuffer.data(), 0, nullptr);
 
@@ -876,45 +755,7 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
    descriptorSetSampler.push_back(tempDescriptor);
 
 }
-void HelloTriangleApplication::updateDescriptorSet(int index)
-{
 
-   VkDescriptorBufferInfo uboBufferInfo ={};
-   uboBufferInfo.buffer = uniformBuffers.cameraBuffer;
-   uboBufferInfo.offset = 0;
-   uboBufferInfo.range  = VK_WHOLE_SIZE;
-
-   VkDescriptorBufferInfo dynamicBufferInfo ={};
-   dynamicBufferInfo.buffer = uniformBuffers.dynamicBuffer;
-   dynamicBufferInfo.offset = 0;
-   dynamicBufferInfo.range  = VK_WHOLE_SIZE;
-
-
-   std::array<VkWriteDescriptorSet, 2> descriptorWritesMatrix ={};
-   descriptorWritesMatrix[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWritesMatrix[0].dstSet           = descriptorSetMatrixBuffer;
-   descriptorWritesMatrix[0].dstBinding       = 0;
-   descriptorWritesMatrix[0].dstArrayElement  = 0;
-   descriptorWritesMatrix[0].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   descriptorWritesMatrix[0].descriptorCount  = 1;
-   descriptorWritesMatrix[0].pBufferInfo      = &uboBufferInfo;
-   descriptorWritesMatrix[0].pImageInfo       = nullptr;
-   descriptorWritesMatrix[0].pTexelBufferView = nullptr;
-
-   descriptorWritesMatrix[1].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWritesMatrix[1].dstSet           = descriptorSetMatrixBuffer;
-   descriptorWritesMatrix[1].dstBinding       = 1;
-   descriptorWritesMatrix[1].dstArrayElement  = 0;
-   descriptorWritesMatrix[1].descriptorType   = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
-   descriptorWritesMatrix[1].descriptorCount  = 1;
-   descriptorWritesMatrix[1].pBufferInfo      = &dynamicBufferInfo;
-   descriptorWritesMatrix[1].pImageInfo       = nullptr;
-   descriptorWritesMatrix[1].pTexelBufferView = nullptr;
-
-
-   vkUpdateDescriptorSets(vulkanStuff.device, static_cast<uint32_t>(descriptorWritesMatrix.size()), descriptorWritesMatrix.data(), 0, nullptr);
-
-}
 void HelloTriangleApplication::createBuffer(
    VkDeviceSize size,
    VkBufferUsageFlags usage,
@@ -1036,10 +877,11 @@ void HelloTriangleApplication::createCommandBuffers()
 
          vkCmdBindIndexBuffer(vulkanStuff.commandBuffers[i], mesh->getIndexBuffer(meshId), 0, VK_INDEX_TYPE_UINT32);
 
-         uint32_t dynamicOffset = j * static_cast<uint32_t>(dynamicAlignment);
+         uint32_t dynamicOffset = j * static_cast<uint32_t>(worldObject->getDynamicAlignment());
 
-         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSetMatrixBuffer, 1, &dynamicOffset);
-         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, &descriptorSetSampler[meshId], 0, nullptr);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSetMatrixBuffer, 0, nullptr);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, worldObject->getDescriptorSet(), 1, &dynamicOffset);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &descriptorSetSampler[meshId], 0, nullptr);
          
          vkCmdDrawIndexed(vulkanStuff.commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
       }
@@ -1282,8 +1124,8 @@ void HelloTriangleApplication::cleanUp()
    vkFreeMemory(vulkanStuff.device, uniformBuffers.cameraBufferMemory, nullptr);
    vkDestroyBuffer(vulkanStuff.device, uniformBuffers.cameraBuffer, nullptr);
 
-   vkFreeMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory, nullptr);
-   vkDestroyBuffer(vulkanStuff.device, uniformBuffers.dynamicBuffer, nullptr);
+   //vkFreeMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory, nullptr);
+   //vkDestroyBuffer(vulkanStuff.device, uniformBuffers.dynamicBuffer, nullptr);
 
    delete texture;
    texture = nullptr;
@@ -1499,7 +1341,6 @@ void HelloTriangleApplication::mainLoop()
       worldObject->update(float((double)dt / 1e9f));
 
       updateUniformBuffer();
-      updateDynamicUniformBuffer();
 
       drawFrame();
 
@@ -1538,29 +1379,6 @@ void HelloTriangleApplication::updateUniformBuffer()
 
 }
 
-void HelloTriangleApplication::updateDynamicUniformBuffer()
-{
-   for(uint32_t i = 0; i < worldObject->getNumberOfObjects(); i++)
-   {
-      glm::mat4* modelMat = (glm::mat4*)(((uint64_t)uboDataDynamic.model + (i * dynamicAlignment)));
-
-      *modelMat = worldObject->getModelMatrix(i);
-   }
-
-   void *data;
-   vkMapMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory, 0, dynamicBufferSize, 0, &data);
-
-   memcpy(data, uboDataDynamic.model, dynamicBufferSize);
-
-   VkMappedMemoryRange mappedMemoryRange{};
-   mappedMemoryRange.sType = VK_STRUCTURE_TYPE_MAPPED_MEMORY_RANGE;
-
-   mappedMemoryRange.memory = uniformBuffers.dynamicBufferMemory;
-   mappedMemoryRange.size = dynamicBufferSize;
-   vkFlushMappedMemoryRanges(vulkanStuff.device, 1, &mappedMemoryRange);
-
-   vkUnmapMemory(vulkanStuff.device, uniformBuffers.dynamicBufferMemory);
-}
 
 void HelloTriangleApplication::drawFrame()
 {
