@@ -6,6 +6,7 @@
 #include <map>
 
 #include "VulkanHelpers.hpp"
+#include "VulkanDevice.hpp"
 
 #include "stdafx.h"
 #include "Texture.h"
@@ -19,11 +20,11 @@ struct VulkanDescriptor
    VkDescriptorSetLayout descriptorSetLayout; // could be a vector.one for each descriptor set, or each descriptor points to a layout
    std::vector<VkDescriptorSet> descriptorSet;
 
-   const VulkanStuff *vulkanStuff;
+   const vks::VulkanDevice *vulkanDevice;
 
-   VulkanDescriptor(const VulkanStuff *vulkanStuff)
+   VulkanDescriptor(const vks::VulkanDevice *vulkanDevice)
    {
-      this->vulkanStuff = vulkanStuff;
+      this->vulkanDevice = vulkanDevice;
    }
 
    void createDescriptorPool()
@@ -42,7 +43,7 @@ struct VulkanDescriptor
       poolInfo.pPoolSizes    = poolSizes.data();
       poolInfo.maxSets       = 200;
 
-      if(vkCreateDescriptorPool(vulkanStuff->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+      if(vkCreateDescriptorPool(vulkanDevice->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to create descriptor pool!");
       }
@@ -59,7 +60,7 @@ struct VulkanDescriptor
       allocInfo.descriptorSetCount = 1;
       allocInfo.pSetLayouts        = layouts;
 
-      if(vkAllocateDescriptorSets(vulkanStuff->device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
+      if(vkAllocateDescriptorSets(vulkanDevice->device, &allocInfo, &tempDescriptor) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to allocate descriptor set!");
       }
@@ -95,7 +96,7 @@ struct VulkanDescriptor
       descriptorWrites[2].pImageInfo       = &imageSamplerInfo;
       descriptorWrites[2].pTexelBufferView = nullptr;
 
-      vkUpdateDescriptorSets(vulkanStuff->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
+      vkUpdateDescriptorSets(vulkanDevice->device, static_cast<uint32_t>(descriptorWrites.size()), descriptorWrites.data(), 0, nullptr);
 
       descriptorSet.push_back(tempDescriptor);
 
@@ -135,7 +136,7 @@ struct VulkanDescriptor
       layoutInfo.bindingCount = static_cast<uint32_t>(bindings.size());
       layoutInfo.pBindings    = bindings.data();
 
-      if(vkCreateDescriptorSetLayout(vulkanStuff->device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+      if(vkCreateDescriptorSetLayout(vulkanDevice->device, &layoutInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
       {
          throw std::runtime_error("failed to create descriptor set layout!");
       }
@@ -198,7 +199,7 @@ private:
    };
 
 public:
-   Mesh(const VulkanStuff* vulkanStuff);
+   Mesh(vks::VulkanDevice* vulkanDevice);
    ~Mesh();
 
    // TODO: do so we can send in one or more objects? currently only one at a time
@@ -236,8 +237,7 @@ private:
    void createVertexBuffer();
    void createIndexBuffer();
 
-
-   const VulkanStuff* vulkanStuff;
+   vks::VulkanDevice* vulkanDevice;
 
    std::vector<VertexData> vertexData;
 
@@ -267,78 +267,4 @@ private:
    inline void loadMaterials(std::vector<tinyobj::material_t>& materials);
 
    inline void extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& attrib, tinyobj::index_t& index);
-
-   // TODO: Should be in Buffer class
-   void createBuffer(
-      VkDeviceSize size,
-      VkBufferUsageFlags usage,
-      VkMemoryPropertyFlags properties,
-      VkBuffer *buffer,
-      VkDeviceMemory *bufferMemory);
-
-   void copyBuffer(VkBuffer srcBuffer, VkBuffer dstBuffer, VkDeviceSize size)
-   {
-      VkCommandBuffer commandBuffer = beginSingleTimeCommand();
-
-      VkBufferCopy bufferCopy ={};
-      bufferCopy.srcOffset = 0;
-      bufferCopy.dstOffset = 0;
-      bufferCopy.size      = size;
-
-      vkCmdCopyBuffer(commandBuffer, srcBuffer, dstBuffer, 1, &bufferCopy);
-
-      endSingleTimeCommand(commandBuffer);
-   }
-
-   // TODO: helper class? or some other place? Not here.
-   VkCommandBuffer beginSingleTimeCommand()
-   {
-      VkCommandBufferAllocateInfo allocInfo ={};
-      allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      allocInfo.commandPool        = vulkanStuff->commandPool;
-      allocInfo.commandBufferCount = 1;
-
-      VkCommandBuffer commandBuffer;
-      vkAllocateCommandBuffers(vulkanStuff->device, &allocInfo, &commandBuffer);
-
-      VkCommandBufferBeginInfo beginInfo ={};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-      vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-      return commandBuffer;
-   }
-
-   void endSingleTimeCommand(VkCommandBuffer commandBuffer)
-   {
-      vkEndCommandBuffer(commandBuffer);
-
-      VkSubmitInfo submitInfo ={};
-      submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers    = &commandBuffer;
-
-      vkQueueSubmit(vulkanStuff->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-      vkQueueWaitIdle(vulkanStuff->graphicsQueue);
-
-      vkFreeCommandBuffers(vulkanStuff->device, vulkanStuff->commandPool, 1, &commandBuffer);
-   }
-   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties)
-   {
-      VkPhysicalDeviceMemoryProperties memoryProperties;
-      vkGetPhysicalDeviceMemoryProperties(vulkanStuff->physicalDevice, &memoryProperties);
-
-      for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-      {
-         if(typeFiter & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags&properties) == properties)
-         {
-            return i;
-         }
-      }
-
-      throw std::runtime_error("failed to find suitable memory type!");
-   }
 };

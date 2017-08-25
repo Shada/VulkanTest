@@ -10,11 +10,13 @@
 #include <math.h>
 #include <stb_image.h>
 
+#include "VulkanDevice.hpp"
+
 class Texture
 {
 public:
    
-   Texture(const VulkanStuff *vulkanStuff);
+   Texture(vks::VulkanDevice *vulkanDevice);
    ~Texture();
 
    int loadTexture(std::string filename); // returns the id of the texture
@@ -52,7 +54,7 @@ private:
    std::vector<VkImageView> imageView;
    std::vector<glm::ivec2> imageSize;
 
-   const VulkanStuff *vulkanStuff;
+   vks::VulkanDevice *vulkanDevice;
 
    std::vector<std::string> name; 
 
@@ -61,27 +63,10 @@ private:
    void createSampler();
    void createImageView();
 
-   // TODO: helper function
-   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties)
-   {
-      VkPhysicalDeviceMemoryProperties memoryProperties;
-      vkGetPhysicalDeviceMemoryProperties(vulkanStuff->physicalDevice, &memoryProperties);
-
-      for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-      {
-         if(typeFiter & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags&properties) == properties)
-         {
-            return i;
-         }
-      }
-
-      throw std::runtime_error("failed to find suitable memory type!");
-   }
-
    // TODO: helper function ?
    void transitionImageLayout(VkImage image, VkFormat format, VkImageLayout oldLayout, VkImageLayout newLayout)
    {
-      VkCommandBuffer commandBuffer = beginSingleTimeCommand();
+      VkCommandBuffer commandBuffer = vulkanDevice->beginSingleTimeCommand();
 
       VkImageMemoryBarrier barrier ={};
       barrier.sType                           = VK_STRUCTURE_TYPE_IMAGE_MEMORY_BARRIER;
@@ -148,46 +133,7 @@ private:
          0, nullptr,
          1, &barrier);
 
-      endSingleTimeCommand(commandBuffer);
-   }
-
-
-   // TODO: helper function
-   void endSingleTimeCommand(VkCommandBuffer commandBuffer)
-   {
-      vkEndCommandBuffer(commandBuffer);
-
-      VkSubmitInfo submitInfo ={};
-      submitInfo.sType              = VK_STRUCTURE_TYPE_SUBMIT_INFO;
-      submitInfo.commandBufferCount = 1;
-      submitInfo.pCommandBuffers    = &commandBuffer;
-
-      vkQueueSubmit(vulkanStuff->graphicsQueue, 1, &submitInfo, VK_NULL_HANDLE);
-
-      vkQueueWaitIdle(vulkanStuff->graphicsQueue);
-
-      vkFreeCommandBuffers(vulkanStuff->device, vulkanStuff->commandPool, 1, &commandBuffer);
-   }
-
-   // TODO: helper function
-   VkCommandBuffer beginSingleTimeCommand()
-   {
-      VkCommandBufferAllocateInfo allocInfo ={};
-      allocInfo.sType              = VK_STRUCTURE_TYPE_COMMAND_BUFFER_ALLOCATE_INFO;
-      allocInfo.level              = VK_COMMAND_BUFFER_LEVEL_PRIMARY;
-      allocInfo.commandPool        = vulkanStuff->commandPool;
-      allocInfo.commandBufferCount = 1;
-
-      VkCommandBuffer commandBuffer;
-      vkAllocateCommandBuffers(vulkanStuff->device, &allocInfo, &commandBuffer);
-
-      VkCommandBufferBeginInfo beginInfo ={};
-      beginInfo.sType = VK_STRUCTURE_TYPE_COMMAND_BUFFER_BEGIN_INFO;
-      beginInfo.flags = VK_COMMAND_BUFFER_USAGE_ONE_TIME_SUBMIT_BIT;
-
-      vkBeginCommandBuffer(commandBuffer, &beginInfo);
-
-      return commandBuffer;
+      vulkanDevice->endSingleTimeCommand(commandBuffer);
    }
 
    // TODO: helper function ?
@@ -201,7 +147,7 @@ private:
    // TODO: helper function ?
    void copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
    {
-      VkCommandBuffer commandBuffer = beginSingleTimeCommand();
+      VkCommandBuffer commandBuffer = vulkanDevice->beginSingleTimeCommand();
 
       VkBufferImageCopy region ={};
       region.bufferOffset      = 0;
@@ -225,10 +171,7 @@ private:
          &region
       );
 
-      endSingleTimeCommand(commandBuffer);
+      vulkanDevice->endSingleTimeCommand(commandBuffer);
    }
-
-   // TODO: helper function
-   void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
 };
 

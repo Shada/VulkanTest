@@ -2,35 +2,33 @@
 
 #include <unordered_map>
 
-Mesh::Mesh(const VulkanStuff* vulkanStuff)
+Mesh::Mesh(vks::VulkanDevice *vulkanDevice)
 {
-   this->vulkanStuff = vulkanStuff;
+   this->vulkanDevice = vulkanDevice;
 
-   texture = new Texture(vulkanStuff);
+   texture = new Texture(vulkanDevice);
 
-   descriptor = new VulkanDescriptor(vulkanStuff);
+   descriptor = new VulkanDescriptor(vulkanDevice);
 }
 
 Mesh::~Mesh()
 {
    for(auto &buffer : vertexBuffer)
    {
-      vkDestroyBuffer(vulkanStuff->device, buffer, nullptr);
+      vkDestroyBuffer(vulkanDevice->device, buffer, nullptr);
    }
    for(auto &memory : vertexBufferMemory)
    {
-      vkFreeMemory(vulkanStuff->device, memory, nullptr);
+      vkFreeMemory(vulkanDevice->device, memory, nullptr);
    }
    for(auto &buffer : indexBuffer)
    {
-      vkDestroyBuffer(vulkanStuff->device, buffer, nullptr);
+      vkDestroyBuffer(vulkanDevice->device, buffer, nullptr);
    }
    for(auto &memory : indexBufferMemory)
    {
-      vkFreeMemory(vulkanStuff->device, memory, nullptr);
+      vkFreeMemory(vulkanDevice->device, memory, nullptr);
    }
-
-   vulkanStuff = nullptr;
 
    delete texture;
    texture = nullptr;
@@ -132,7 +130,7 @@ void Mesh::draw(int commandBufferIndex)
 {
    //for loops here. for each mesh, for each instance
    // the objects need to be sorted by mesh to be optimized. this might need to be moved into a coupler class/struct to work best
-   vkCmdBindDescriptorSets(vulkanStuff->commandBuffers[commandBufferIndex], VkPipelineBindPoint(), 0, 0, 1, descriptor->getDescriptorSet(0), 0, nullptr);
+  // vkCmdBindDescriptorSets(vulkanStuff->commandBuffers[commandBufferIndex], VkPipelineBindPoint(), 0, 0, 1, descriptor->getDescriptorSet(0), 0, nullptr);
    
 }
 
@@ -181,6 +179,7 @@ inline void Mesh::extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& att
    vertex.colour ={ 1.0f,1.0f,1.0f };
 
 }
+// TODO: Merge to one method that takes argument about which type of buffer it is.
 void Mesh::createIndexBuffer()
 {
    VkDeviceSize bufferSize = sizeof(vertexData.back().indices[0]) * vertexData.back().indices.size();
@@ -188,7 +187,7 @@ void Mesh::createIndexBuffer()
    VkBuffer stagingBuffer;
    VkDeviceMemory stagingMemory;
 
-   createBuffer(
+   vulkanDevice->createBuffer(
       bufferSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -196,26 +195,26 @@ void Mesh::createIndexBuffer()
       &stagingMemory);
 
    void* data;
-   vkMapMemory(vulkanStuff->device, stagingMemory, 0, bufferSize, 0, &data);
+   vkMapMemory(vulkanDevice->device, stagingMemory, 0, bufferSize, 0, &data);
    memcpy(data, vertexData.back().indices.data(), (size_t)bufferSize);
-   vkUnmapMemory(vulkanStuff->device, stagingMemory);
+   vkUnmapMemory(vulkanDevice->device, stagingMemory);
 
    VkBuffer temp;
    VkDeviceMemory tempMem;
-   createBuffer(
+   vulkanDevice->createBuffer(
       bufferSize,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_INDEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
       &temp,
       &tempMem);
 
-   copyBuffer(stagingBuffer, temp, bufferSize);
+   vulkanDevice->copyBuffer(stagingBuffer, temp, bufferSize);
 
    indexBuffer.push_back(temp);
    indexBufferMemory.push_back(tempMem);
 
-   vkDestroyBuffer(vulkanStuff->device, stagingBuffer, nullptr);
-   vkFreeMemory(vulkanStuff->device, stagingMemory, nullptr);
+   vkDestroyBuffer(vulkanDevice->device, stagingBuffer, nullptr);
+   vkFreeMemory(vulkanDevice->device, stagingMemory, nullptr);
 }
 
 void Mesh::createVertexBuffer()
@@ -225,7 +224,7 @@ void Mesh::createVertexBuffer()
    VkBuffer stagingBuffer;
    VkDeviceMemory stagingBufferMemory;
 
-   createBuffer(
+   vulkanDevice->createBuffer(
       bufferSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -233,14 +232,14 @@ void Mesh::createVertexBuffer()
       &stagingBufferMemory);
 
    void *data;
-   vkMapMemory(vulkanStuff->device, stagingBufferMemory, 0, bufferSize, 0, &data);
+   vkMapMemory(vulkanDevice->device, stagingBufferMemory, 0, bufferSize, 0, &data);
    memcpy(data, vertexData.back().vertices.data(), (size_t)bufferSize);
-   vkUnmapMemory(vulkanStuff->device, stagingBufferMemory);
+   vkUnmapMemory(vulkanDevice->device, stagingBufferMemory);
 
    VkBuffer temp;
    VkDeviceMemory tempMem;
    
-   createBuffer(
+   vulkanDevice->createBuffer(
       bufferSize,
       VK_BUFFER_USAGE_TRANSFER_DST_BIT | VK_BUFFER_USAGE_VERTEX_BUFFER_BIT,
       VK_MEMORY_PROPERTY_DEVICE_LOCAL_BIT,
@@ -248,45 +247,11 @@ void Mesh::createVertexBuffer()
       &tempMem);
 
 
-   copyBuffer(stagingBuffer, temp, bufferSize);
+   vulkanDevice->copyBuffer(stagingBuffer, temp, bufferSize);
 
    vertexBuffer.push_back(temp);
    vertexBufferMemory.push_back(tempMem);
 
-   vkDestroyBuffer(vulkanStuff->device, stagingBuffer, nullptr);
-   vkFreeMemory(vulkanStuff->device, stagingBufferMemory, nullptr);
-}
-
-void Mesh::createBuffer(
-   VkDeviceSize size,
-   VkBufferUsageFlags usage,
-   VkMemoryPropertyFlags properties,
-   VkBuffer *buffer,
-   VkDeviceMemory *bufferMemory)
-{
-   VkBufferCreateInfo bufferInfo ={};
-   bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-   bufferInfo.size        = size;
-   bufferInfo.usage       = usage;
-   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-   if(vkCreateBuffer(vulkanStuff->device, &bufferInfo, nullptr, buffer) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to create vertex buffer!");
-   }
-
-   VkMemoryRequirements memoryRequirements;
-   vkGetBufferMemoryRequirements(vulkanStuff->device, *buffer, &memoryRequirements);
-
-   VkMemoryAllocateInfo allocateInfo ={};
-   allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-   allocateInfo.allocationSize  = memoryRequirements.size;
-   allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
-
-   if(vkAllocateMemory(vulkanStuff->device, &allocateInfo, nullptr, bufferMemory) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to allocate vertex buffer memory!");
-   }
-
-   vkBindBufferMemory(vulkanStuff->device, *buffer, *bufferMemory, 0);
+   vkDestroyBuffer(vulkanDevice->device, stagingBuffer, nullptr);
+   vkFreeMemory(vulkanDevice->device, stagingBufferMemory, nullptr);
 }

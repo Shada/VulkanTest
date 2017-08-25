@@ -13,17 +13,6 @@ class HelloTriangleApplication
 {
 private:
 
-   // structs
-   struct QueueFamilyIndices
-   {
-      int graphicsFamily = -1;
-      int presentFamily = -1;
-      bool isComplete()
-      {
-         return graphicsFamily >= 0 && presentFamily >= 0;
-      }
-   };
-
    struct SwapChainSupportDetails
    {
       VkSurfaceCapabilitiesKHR capabilities;
@@ -70,7 +59,7 @@ private:
    // vulkan stuff
    VulkanStuff vulkanStuff;
 
-   VulkanDevice vulkanDevice;
+   vks::VulkanDevice vulkanDevice;
 
    VkDebugReportCallbackEXT callback;
    
@@ -112,8 +101,6 @@ private:
 
    VkViewport viewport ={};
 
-   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties);
-
    void initVulkan();
 
    void createInstance();
@@ -154,10 +141,6 @@ private:
 
    void createDescriptorSet(int textureIndex);
 
-   void createBuffer(VkDeviceSize, VkBufferUsageFlags, VkMemoryPropertyFlags, VkBuffer*, VkDeviceMemory*);
-
-   void copyBuffer(VkBuffer, VkBuffer, VkDeviceSize);
-
    void createCommandBuffers();
 
    void createSemaphores();
@@ -168,15 +151,9 @@ private:
 
    bool hasStencilComponent(VkFormat);
 
-   VkCommandBuffer beginSingleTimeCommand();
-
-   void endSingleTimeCommand(VkCommandBuffer);
-
    void transitionImageLayout(VkImage, VkFormat, VkImageLayout, VkImageLayout);
 
    void copyBufferToImage(VkBuffer, VkImage, uint32_t, uint32_t);
-
-   QueueFamilyIndices findQueueFamilies(VkPhysicalDevice);
 
    std::vector<const char*> getRequiredExtensions();
 
@@ -206,7 +183,6 @@ private:
    std::vector<VkImageView> swapChainImageViews;
 
    void createImageViews();
-
 
    // cleanup of vulkan stuff
    void cleanUp();

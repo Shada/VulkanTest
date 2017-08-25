@@ -4,19 +4,18 @@
 #include <glm\gtc\matrix_transform.hpp>
 #include <glm\glm.hpp>
 
-//TODO: don't want to include this... so probably should move VulkanStuff
 #include "stdafx.h"
 
 #include "WorldObjectToMeshMapper.h"
 #include "VulkanHelpers.hpp"
-
+#include "VulkanDevice.hpp"
 
 
 class WorldObject
 {
 public:
 
-   WorldObject(WorldObjectToMeshMapper* worldObjectToMeshMapper, const VulkanStuff *vulkanStuff);
+   WorldObject(WorldObjectToMeshMapper* worldObjectToMeshMapper, vks::VulkanDevice* vulkanDevice);
    ~WorldObject();
 
    // could also do it by name?
@@ -95,7 +94,8 @@ private:
    void createUniformBuffer();
 
    WorldObjectToMeshMapper* worldObjectToMeshMapper;
-   const VulkanStuff* vulkanStuff;
+
+   vks::VulkanDevice* vulkanDevice;
 
    uint32_t numberOfObjects;
    std::vector<uint32_t> meshId;
@@ -129,58 +129,6 @@ private:
    {
       return vulkan::initialisers::createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
    }
-
-   void createBuffer(
-      VkDeviceSize size,
-      VkBufferUsageFlags usage,
-      VkMemoryPropertyFlags properties,
-      VkBuffer *buffer,
-      VkDeviceMemory *bufferMemory)
-   {
-      VkBufferCreateInfo bufferInfo ={};
-      bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-      bufferInfo.size        = size;
-      bufferInfo.usage       = usage;
-      bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-      if(vkCreateBuffer(vulkanStuff->device, &bufferInfo, nullptr, buffer) != VK_SUCCESS)
-      {
-         throw std::runtime_error("failed to create vertex buffer!");
-      }
-
-      VkMemoryRequirements memoryRequirements;
-      vkGetBufferMemoryRequirements(vulkanStuff->device, *buffer, &memoryRequirements);
-
-      VkMemoryAllocateInfo allocateInfo ={};
-      allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-      allocateInfo.allocationSize  = memoryRequirements.size;
-      allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
-
-      if(vkAllocateMemory(vulkanStuff->device, &allocateInfo, nullptr, bufferMemory) != VK_SUCCESS)
-      {
-         throw std::runtime_error("failed to allocate vertex buffer memory!");
-      }
-
-      vkBindBufferMemory(vulkanStuff->device, *buffer, *bufferMemory, 0);
-   }
-
-
-   uint32_t findMemoryType(uint32_t typeFiter, VkMemoryPropertyFlags properties)
-   {
-      VkPhysicalDeviceMemoryProperties memoryProperties;
-      vkGetPhysicalDeviceMemoryProperties(vulkanStuff->physicalDevice, &memoryProperties);
-
-      for(uint32_t i = 0; i < memoryProperties.memoryTypeCount; i++)
-      {
-         if(typeFiter & (1 << i) && (memoryProperties.memoryTypes[i].propertyFlags&properties) == properties)
-         {
-            return i;
-         }
-      }
-
-      throw std::runtime_error("failed to find suitable memory type!");
-   }
-
 
 public:
    void createDescriptorSetLayout();

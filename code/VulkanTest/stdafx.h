@@ -21,10 +21,6 @@ const std::string TEXTURE_PATH_CHALET = "textures/chalet.jpg";
 const std::string MODEL_PATH_STORMTROOPER = "models/stormtrooper.obj";
 const std::string TEXTURE_PATH_STORMTROOPER = "textures/stormtrooper_D.tga";
 
-namespace alloc
-{
-   
-};
 
 // somewhere else.. Vulkan_helper_stuff.h?
 // TODO: we now have VulkanDevice, which will replace most of this.
@@ -32,17 +28,7 @@ namespace alloc
 // and command buffers, swapchains ? maybe, just maybe.. we'll see how we do that.. 
 struct VulkanStuff
 {
-   VkInstance instance;
-   VkPhysicalDevice physicalDevice;
-   VkQueue graphicsQueue;
-   VkQueue presentQueue;
-   VkDevice device;
-   VkSurfaceKHR surface;
-   VkCommandPool commandPool;
    std::vector<VkCommandBuffer> commandBuffers;
-
-   VkPhysicalDeviceProperties deviceProperties;
-   VkPhysicalDeviceFeatures deviceFeatures;
 };
 
 struct Vertex
@@ -103,23 +89,6 @@ namespace std
    };
 }
 
-struct UniformBufferObject
-{
-   glm::mat4 model;
-   glm::mat4 view;
-   glm::mat4 proj;
-};
-
-const std::vector<const char*> validationLayers =
-{
-   "VK_LAYER_LUNARG_standard_validation"
-};
-
-const std::vector<const char*> deviceExtensions = 
-{
-   VK_KHR_SWAPCHAIN_EXTENSION_NAME
-};
-
 inline VkResult CreateDebugReportCallbackEXT(
    VkInstance instance,
    const VkDebugReportCallbackCreateInfoEXT* pCreateInfo,
@@ -150,12 +119,6 @@ inline void DestroyDebugReportCallbackEXT(
       func(instance, callback, pAllocator);
    }
 }
-
-#ifdef NDEBUG
-const bool enableValidationLayers = false;
-#else
-const bool enableValidationLayers = true;
-#endif
 
 const int WIDTH  = 800;
 const int HEIGHT = 600;

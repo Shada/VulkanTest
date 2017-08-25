@@ -4,20 +4,21 @@
 //TODO: add collision box and collision detections. Object vs object, and object vs ray to start
 
 
-WorldObject::WorldObject(WorldObjectToMeshMapper *worldObjectToMeshMapper, const VulkanStuff *vulkanStuff)
+WorldObject::WorldObject(WorldObjectToMeshMapper *worldObjectToMeshMapper, vks::VulkanDevice* vulkanDevice)
 {
    this->worldObjectToMeshMapper = worldObjectToMeshMapper;
-   this->vulkanStuff = vulkanStuff;
+
+   this->vulkanDevice = vulkanDevice;
 
    numberOfObjects = 0;
 }
 
 WorldObject::~WorldObject()
 {
-   vkDestroyBuffer(vulkanStuff->device, worldMatrixUBO.buffer, nullptr);
-   vkFreeMemory(vulkanStuff->device, worldMatrixUBO.memory, nullptr);
+   vkDestroyBuffer(vulkanDevice->device, worldMatrixUBO.buffer, nullptr);
+   vkFreeMemory(vulkanDevice->device, worldMatrixUBO.memory, nullptr);
 
-   vkDestroyDescriptorSetLayout(vulkanStuff->device, descriptorSetLayout, nullptr);
+   vkDestroyDescriptorSetLayout(vulkanDevice->device, descriptorSetLayout, nullptr);
 }
 
 void WorldObject::update(float dt)
@@ -73,7 +74,7 @@ void WorldObject::createDescriptorPool()
    poolInfo.pPoolSizes    = &poolSize;
    poolInfo.maxSets       = 1;
 
-   if(vkCreateDescriptorPool(vulkanStuff->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+   if(vkCreateDescriptorPool(vulkanDevice->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create descriptor pool!");
    }
@@ -85,7 +86,7 @@ void WorldObject::createDescriptorSetLayout()
 
    auto layoutCreateInfo = vulkan::initialisers::createDescriptorSetLayoutCreateInfo(descriptorSetLayoutBinding);
 
-   if(vkCreateDescriptorSetLayout(vulkanStuff->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+   if(vkCreateDescriptorSetLayout(vulkanDevice->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create Matrix Buffer descriptor set layout!");
    }
@@ -104,7 +105,7 @@ void WorldObject::createDescriptorSet()
    allocInfoMatrixBuffer.descriptorSetCount = 1;
    allocInfoMatrixBuffer.pSetLayouts        = &descriptorSetLayout;
 
-   if(vkAllocateDescriptorSets(vulkanStuff->device, &allocInfoMatrixBuffer, &descriptorSet) != VK_SUCCESS)
+   if(vkAllocateDescriptorSets(vulkanDevice->device, &allocInfoMatrixBuffer, &descriptorSet) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to allocate MatrixBuffer descriptor set!");
    }
@@ -127,7 +128,7 @@ void WorldObject::createDescriptorSet()
    descriptorWritesMatrixBuffer.pImageInfo       = nullptr;
    descriptorWritesMatrixBuffer.pTexelBufferView = nullptr;
 
-   vkUpdateDescriptorSets(vulkanStuff->device, 1, &descriptorWritesMatrixBuffer, 0, nullptr);
+   vkUpdateDescriptorSets(vulkanDevice->device, 1, &descriptorWritesMatrixBuffer, 0, nullptr);
 }
 
 uint32_t WorldObject::addInstance(uint32_t meshId)
@@ -217,11 +218,10 @@ void WorldObject::invalidateModelMatrix(uint32_t index)
    isModelMatrixInvalid[index] = true;
 }
 
-
 void WorldObject::createUniformBuffer()
 {
    // model matrices (dynamic buffer)
-   size_t uboAlignment = (size_t)vulkanStuff->deviceProperties.limits.minUniformBufferOffsetAlignment;
+   size_t uboAlignment = (size_t)vulkanDevice->deviceProperties.limits.minUniformBufferOffsetAlignment;
    dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
 
    size_t bufferSize = this->getNumberOfObjects() * dynamicAlignment;
@@ -232,7 +232,7 @@ void WorldObject::createUniformBuffer()
    std::cout << "minUniformBufferOffsetAlignment = " << uboAlignment << std::endl;
    std::cout << "dynamicAlignment = " << dynamicAlignment << std::endl;
 
-   createBuffer(
+   vulkanDevice->createBuffer(
       bufferSize,
       VK_BUFFER_USAGE_UNIFORM_BUFFER_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT,
@@ -258,7 +258,7 @@ void WorldObject::updateDynamicUniformBuffer()
    }
 
    void *data;
-   vkMapMemory(vulkanStuff->device, worldMatrixUBO.memory, 0, dynamicBufferSize, 0, &data);
+   vkMapMemory(vulkanDevice->device, worldMatrixUBO.memory, 0, dynamicBufferSize, 0, &data);
 
    memcpy(data, uboDataDynamic.model, dynamicBufferSize);
 
@@ -267,9 +267,9 @@ void WorldObject::updateDynamicUniformBuffer()
 
    mappedMemoryRange.memory = worldMatrixUBO.memory;
    mappedMemoryRange.size = dynamicBufferSize;
-   vkFlushMappedMemoryRanges(vulkanStuff->device, 1, &mappedMemoryRange);
+   vkFlushMappedMemoryRanges(vulkanDevice->device, 1, &mappedMemoryRange);
 
-   vkUnmapMemory(vulkanStuff->device, worldMatrixUBO.memory);
+   vkUnmapMemory(vulkanDevice->device, worldMatrixUBO.memory);
 }
 
 void WorldObject::updateDescriptorSet()
@@ -292,5 +292,5 @@ void WorldObject::updateDescriptorSet()
    descriptorWritesMatrix[0].pImageInfo       = nullptr;
    descriptorWritesMatrix[0].pTexelBufferView = nullptr;
 
-   vkUpdateDescriptorSets(vulkanStuff->device, static_cast<uint32_t>(descriptorWritesMatrix.size()), descriptorWritesMatrix.data(), 0, nullptr);
+   vkUpdateDescriptorSets(vulkanDevice->device, static_cast<uint32_t>(descriptorWritesMatrix.size()), descriptorWritesMatrix.data(), 0, nullptr);
 }

@@ -1,18 +1,18 @@
 #include "Texture.h"
 
-Texture::Texture(const VulkanStuff *vulkanStuff)
+Texture::Texture(vks::VulkanDevice *vulkanDevice)
 { 
-   this->vulkanStuff = vulkanStuff;
+   this->vulkanDevice = vulkanDevice;
 }
 
 Texture::~Texture()
 {
    for(size_t i = 0; i < image.size(); i++)
    {
-      vkFreeMemory(vulkanStuff->device, memory.at(i), nullptr);
-      vkDestroyImage(vulkanStuff->device, image.at(i), nullptr);
-      vkDestroyImageView(vulkanStuff->device, imageView.at(i), nullptr);
-      vkDestroySampler(vulkanStuff->device, sampler.at(i), nullptr);
+      vkFreeMemory(vulkanDevice->device, memory.at(i), nullptr);
+      vkDestroyImage(vulkanDevice->device, image.at(i), nullptr);
+      vkDestroyImageView(vulkanDevice->device, imageView.at(i), nullptr);
+      vkDestroySampler(vulkanDevice->device, sampler.at(i), nullptr);
    }
 
 }
@@ -59,7 +59,7 @@ bool Texture::createImage(std::string filename)
    VkDeviceMemory stagingBufferMemory;
 
    // TODO: Create a helper h-file which have this function.
-   createBuffer(
+   vulkanDevice->createBuffer(
       imageSize,
       VK_BUFFER_USAGE_TRANSFER_SRC_BIT,
       VK_MEMORY_PROPERTY_HOST_VISIBLE_BIT | VK_MEMORY_PROPERTY_HOST_COHERENT_BIT,
@@ -67,9 +67,9 @@ bool Texture::createImage(std::string filename)
       &stagingBufferMemory);
 
    void *data;
-   vkMapMemory(vulkanStuff->device, stagingBufferMemory, 0, imageSize, 0, &data);
+   vkMapMemory(vulkanDevice->device, stagingBufferMemory, 0, imageSize, 0, &data);
    memcpy(data, pixels, static_cast<size_t>(imageSize));
-   vkUnmapMemory(vulkanStuff->device, stagingBufferMemory);
+   vkUnmapMemory(vulkanDevice->device, stagingBufferMemory);
 
    stbi_image_free(pixels);
 
@@ -102,8 +102,8 @@ bool Texture::createImage(std::string filename)
    image.push_back(tempTexture);
    memory.push_back(tempMemory);
 
-   vkDestroyBuffer(vulkanStuff->device, stagingBuffer, nullptr);
-   vkFreeMemory(vulkanStuff->device, stagingBufferMemory, nullptr);
+   vkDestroyBuffer(vulkanDevice->device, stagingBuffer, nullptr);
+   vkFreeMemory(vulkanDevice->device, stagingBufferMemory, nullptr);
 
    return true;
 }
@@ -123,7 +123,7 @@ void Texture::createImageView()
    viewInfo.subresourceRange.baseArrayLayer = 0;
    viewInfo.subresourceRange.layerCount     = 1;
 
-   if(vkCreateImageView(vulkanStuff->device, &viewInfo, nullptr, &tempImageView) != VK_SUCCESS)
+   if(vkCreateImageView(vulkanDevice->device, &viewInfo, nullptr, &tempImageView) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create texture image view!");
    }
@@ -157,7 +157,7 @@ void Texture::createSampler()
    samplerInfo.maxLod     = 0.0f;
 
    VkSampler tempSampler;
-   if(vkCreateSampler(vulkanStuff->device, &samplerInfo, nullptr, &tempSampler) != VK_SUCCESS)
+   if(vkCreateSampler(vulkanDevice->device, &samplerInfo, nullptr, &tempSampler) != VK_SUCCESS)
    {
       throw std::runtime_error("Failed to create texture sampler!");
    }
@@ -187,62 +187,23 @@ void Texture::createVkImage(
    imageInfo.samples       = VK_SAMPLE_COUNT_1_BIT;
    imageInfo.sharingMode   = VK_SHARING_MODE_EXCLUSIVE;
 
-   if(vkCreateImage(vulkanStuff->device, &imageInfo, nullptr, image) != VK_SUCCESS)
+   if(vkCreateImage(vulkanDevice->device, &imageInfo, nullptr, image) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to create image!");
    }
 
    VkMemoryRequirements memRequirements;
-   vkGetImageMemoryRequirements(vulkanStuff->device, *image, &memRequirements);
+   vkGetImageMemoryRequirements(vulkanDevice->device, *image, &memRequirements);
 
    VkMemoryAllocateInfo allocInfo ={};
    allocInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
    allocInfo.allocationSize  = memRequirements.size;
-   allocInfo.memoryTypeIndex = findMemoryType(memRequirements.memoryTypeBits, properties);
+   allocInfo.memoryTypeIndex = vulkanDevice->findMemoryType(memRequirements.memoryTypeBits, properties);
 
-   if(vkAllocateMemory(vulkanStuff->device, &allocInfo, nullptr, imageMemory) != VK_SUCCESS)
+   if(vkAllocateMemory(vulkanDevice->device, &allocInfo, nullptr, imageMemory) != VK_SUCCESS)
    {
       throw std::runtime_error("failed to allocate image memory!");
    }
 
-   vkBindImageMemory(vulkanStuff->device, *image, *imageMemory, 0);
-}
-
-
-
-
-
-
-void Texture::createBuffer(
-   VkDeviceSize size,
-   VkBufferUsageFlags usage,
-   VkMemoryPropertyFlags properties,
-   VkBuffer *buffer,
-   VkDeviceMemory *bufferMemory)
-{
-   VkBufferCreateInfo bufferInfo ={};
-   bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
-   bufferInfo.size        = size;
-   bufferInfo.usage       = usage;
-   bufferInfo.sharingMode = VK_SHARING_MODE_EXCLUSIVE;
-
-   if(vkCreateBuffer(vulkanStuff->device, &bufferInfo, nullptr, buffer) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to create vertex buffer!");
-   }
-
-   VkMemoryRequirements memoryRequirements;
-   vkGetBufferMemoryRequirements(vulkanStuff->device, *buffer, &memoryRequirements);
-
-   VkMemoryAllocateInfo allocateInfo ={};
-   allocateInfo.sType           = VK_STRUCTURE_TYPE_MEMORY_ALLOCATE_INFO;
-   allocateInfo.allocationSize  = memoryRequirements.size;
-   allocateInfo.memoryTypeIndex = findMemoryType(memoryRequirements.memoryTypeBits, properties);
-
-   if(vkAllocateMemory(vulkanStuff->device, &allocateInfo, nullptr, bufferMemory) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to allocate vertex buffer memory!");
-   }
-
-   vkBindBufferMemory(vulkanStuff->device, *buffer, *bufferMemory, 0);
+   vkBindImageMemory(vulkanDevice->device, *image, *imageMemory, 0);
 }
