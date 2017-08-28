@@ -19,6 +19,13 @@ WorldObject::~WorldObject()
    vkFreeMemory(vulkanDevice->device, worldMatrixUBO.memory, nullptr);
 
    vkDestroyDescriptorSetLayout(vulkanDevice->device, descriptorSetLayout, nullptr);
+
+   vkDestroyDescriptorPool(vulkanDevice->device, descriptorPool, nullptr);
+
+   if(uboDataDynamic.model != nullptr)
+   {
+      alignedFree(uboDataDynamic.model);
+   }
 }
 
 void WorldObject::update(float dt)
@@ -97,7 +104,6 @@ void WorldObject::createDescriptorSet()
    // TODO: not the responsibility of this function to do this. 
    // We should however have a check that makes sure that UBO and descriptor pool is initialized
    createUniformBuffer();
-   createDescriptorPool();
 
    VkDescriptorSetAllocateInfo allocInfoMatrixBuffer ={};
    allocInfoMatrixBuffer.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
@@ -177,7 +183,6 @@ uint32_t WorldObject::addInstance(uint32_t meshId, glm::vec3 position, glm::vec3
    return static_cast<uint32_t>(numberOfObjects++);
 }
 
-
 void WorldObject::setPosition(uint32_t index, glm::vec3 position)
 {
    targetPosition[index] = position;
@@ -220,7 +225,10 @@ void WorldObject::invalidateModelMatrix(uint32_t index)
 
 void WorldObject::createUniformBuffer()
 {
-   // model matrices (dynamic buffer)
+   if(uboDataDynamic.model != nullptr)
+   {
+      alignedFree(uboDataDynamic.model);
+   }
    size_t uboAlignment = (size_t)vulkanDevice->deviceProperties.limits.minUniformBufferOffsetAlignment;
    dynamicAlignment = (sizeof(glm::mat4) / uboAlignment) * uboAlignment + ((sizeof(glm::mat4) % uboAlignment) > 0 ? uboAlignment : 0);
 
@@ -231,6 +239,7 @@ void WorldObject::createUniformBuffer()
 
    std::cout << "minUniformBufferOffsetAlignment = " << uboAlignment << std::endl;
    std::cout << "dynamicAlignment = " << dynamicAlignment << std::endl;
+   std::cout << "bufferSize = " << bufferSize << std::endl;
 
    vulkanDevice->createBuffer(
       bufferSize,
@@ -241,9 +250,6 @@ void WorldObject::createUniformBuffer()
 
    // TODO: make so map can be persistent. no need to map/unmap everytime we copy 
    // data in dynamic buffers.
-   // in buffer class. have map() and unmap(). 
-   // in destruction check if ma
-
 
    updateDynamicUniformBuffer();
 }

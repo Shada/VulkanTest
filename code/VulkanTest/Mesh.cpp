@@ -7,8 +7,6 @@ Mesh::Mesh(vks::VulkanDevice *vulkanDevice)
    this->vulkanDevice = vulkanDevice;
 
    texture = new Texture(vulkanDevice);
-
-   descriptor = new VulkanDescriptor(vulkanDevice);
 }
 
 Mesh::~Mesh()
@@ -30,6 +28,9 @@ Mesh::~Mesh()
       vkFreeMemory(vulkanDevice->device, memory, nullptr);
    }
 
+  // if(descriptorPool != VK_NULL_HANDLE)
+  //    vkDestroyDescriptorPool(vulkanDevice->device, descriptorPool, nullptr);
+
    delete texture;
    texture = nullptr;
 }
@@ -43,7 +44,7 @@ Mesh::~Mesh()
 // that makes it easy to optimize the code for each scenario. 
 
 
-// TODO: I currently do not support models where a material is user several times in a model with other material(s) in between
+// TODO: I currently do not support models where a material is used several times in a model with other material(s) in between
 void Mesh::loadMesh(const char* fileName)
 {
    // Load TempMaterials.

@@ -35,6 +35,15 @@ void HelloTriangleApplication::run()
 
    delete mesh;
    mesh = nullptr;
+
+   delete worldObject;
+   worldObject = nullptr;
+
+   delete texture;
+   texture = nullptr;
+
+   delete worldObjectToMeshMapper;
+   worldObjectToMeshMapper = nullptr;
 }
 
 void HelloTriangleApplication::initWindow()
@@ -66,6 +75,7 @@ void HelloTriangleApplication::onWindowResized(GLFWwindow* window, int height, i
 
 void HelloTriangleApplication::initVulkan()
 {
+   // TODO: restructure this, maybe I might want mesh / object loading somewhere by itselves..
    // this should be somewhere esle, like initApplication, initGame, or something like that..
    mesh = new Mesh(&vulkanDevice);
 
@@ -91,7 +101,9 @@ void HelloTriangleApplication::initVulkan()
    loadModel();
    createUniformBuffer();
    createDescriptorPool();
+   worldObject->createDescriptorPool();
    createDescriptorSet(textureIndex);
+   worldObject->createDescriptorSet();
    textureIndex = createTextureImage(TEXTURE_PATH_STORMTROOPER);
    createDescriptorSet(textureIndex);
 
@@ -615,7 +627,7 @@ void HelloTriangleApplication::loadModel()
    worldObject->setRotationSpeed(2, 0.f, 20.f, 20.f);
 }
 
-size_t dynamicBufferSize = 0;
+// Since this is the camera buffer, this should probably be moved into the camera class
 void HelloTriangleApplication::createUniformBuffer()
 {
    // camera buffer (view & projection matrices)
@@ -631,13 +643,11 @@ void HelloTriangleApplication::createUniformBuffer()
 
 void HelloTriangleApplication::createDescriptorPool()
 {
-   std::array<VkDescriptorPoolSize, 3> poolSizes ={};
+   std::array<VkDescriptorPoolSize, 2> poolSizes ={};
    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
    poolSizes[0].descriptorCount = 200;
-   poolSizes[1].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC;
+   poolSizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
    poolSizes[1].descriptorCount = 200;
-   poolSizes[2].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   poolSizes[2].descriptorCount = 200;
 
    VkDescriptorPoolCreateInfo poolInfo ={};
    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
@@ -649,14 +659,11 @@ void HelloTriangleApplication::createDescriptorPool()
    {
       throw std::runtime_error("failed to create descriptor pool!");
    }
-
-   worldObject->createDescriptorPool();
 }
 
 // TODO: These should be moved to respective class.  texture class and camera class.
 void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 {
-   worldObject->createDescriptorSet();
    VkDescriptorSet tempDescriptor;
 
    VkDescriptorBufferInfo uboBufferInfo ={};
@@ -880,63 +887,63 @@ void HelloTriangleApplication::transitionImageLayout(VkImage image, VkFormat for
    barrier.newLayout                       = newLayout;
    barrier.srcQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
    barrier.dstQueueFamilyIndex             = VK_QUEUE_FAMILY_IGNORED;
-   barrier.image                           = image;
-   barrier.subresourceRange.baseMipLevel   = 0;
-   barrier.subresourceRange.levelCount     = 1;
-   barrier.subresourceRange.baseArrayLayer = 0;
-   barrier.subresourceRange.layerCount     = 1;
+barrier.image                           = image;
+barrier.subresourceRange.baseMipLevel   = 0;
+barrier.subresourceRange.levelCount     = 1;
+barrier.subresourceRange.baseArrayLayer = 0;
+barrier.subresourceRange.layerCount     = 1;
 
-   if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+if(newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+{
+   barrier.subresourceRange.aspectMask=VK_IMAGE_ASPECT_DEPTH_BIT;
+   if(hasStencilComponent(format))
    {
-      barrier.subresourceRange.aspectMask=VK_IMAGE_ASPECT_DEPTH_BIT;
-      if(hasStencilComponent(format))
-      {
-         barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
-      }
+      barrier.subresourceRange.aspectMask |= VK_IMAGE_ASPECT_STENCIL_BIT;
    }
-   else
-   {
-      barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
-   }
+}
+else
+{
+   barrier.subresourceRange.aspectMask = VK_IMAGE_ASPECT_COLOR_BIT;
+}
 
-   if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED
-      && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
-   {
-      barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-      barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
-   }
-   else if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED &&
-      newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
-   {
-      barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
-      barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-   }
-   else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
-      newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
-   {
-      barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
-      barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
-   }
-   else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
-      newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
-   {
-      barrier.srcAccessMask = 0;
-      barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
-   }
-   else
-   {
-      throw std::invalid_argument("unsupported layout transition!");
-   }
+if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED
+   && newLayout == VK_IMAGE_LAYOUT_TRANSFER_SRC_OPTIMAL)
+{
+   barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+   barrier.dstAccessMask = VK_ACCESS_TRANSFER_READ_BIT;
+}
+else if(oldLayout == VK_IMAGE_LAYOUT_PREINITIALIZED &&
+   newLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL)
+{
+   barrier.srcAccessMask = VK_ACCESS_HOST_WRITE_BIT;
+   barrier.dstAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+}
+else if(oldLayout == VK_IMAGE_LAYOUT_TRANSFER_DST_OPTIMAL &&
+   newLayout == VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL)
+{
+   barrier.srcAccessMask = VK_ACCESS_TRANSFER_WRITE_BIT;
+   barrier.dstAccessMask = VK_ACCESS_SHADER_READ_BIT;
+}
+else if(oldLayout == VK_IMAGE_LAYOUT_UNDEFINED &&
+   newLayout == VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL)
+{
+   barrier.srcAccessMask = 0;
+   barrier.dstAccessMask = VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_READ_BIT | VK_ACCESS_DEPTH_STENCIL_ATTACHMENT_WRITE_BIT;
+}
+else
+{
+   throw std::invalid_argument("unsupported layout transition!");
+}
 
-   vkCmdPipelineBarrier(
-      commandBuffer,
-      VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
-      0,
-      0, nullptr,
-      0, nullptr,
-      1, &barrier);
+vkCmdPipelineBarrier(
+   commandBuffer,
+   VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT, VK_PIPELINE_STAGE_TOP_OF_PIPE_BIT,
+   0,
+   0, nullptr,
+   0, nullptr,
+   1, &barrier);
 
-   vulkanDevice.endSingleTimeCommand(commandBuffer);
+vulkanDevice.endSingleTimeCommand(commandBuffer);
 }
 
 void HelloTriangleApplication::copyBufferToImage(VkBuffer buffer, VkImage image, uint32_t width, uint32_t height)
@@ -968,10 +975,34 @@ void HelloTriangleApplication::copyBufferToImage(VkBuffer buffer, VkImage image,
    vulkanDevice.endSingleTimeCommand(commandBuffer);
 }
 
+void HelloTriangleApplication::cleanupSwapChain()
+{
+   for(size_t i=0; i < swapChainFrameBuffers.size(); i++)
+   {
+      vkDestroyFramebuffer(vulkanDevice.device, swapChainFrameBuffers[i], nullptr);
+   }
+   vkFreeCommandBuffers(vulkanDevice.device, 
+      vulkanDevice.commandPool, 
+      static_cast<uint32_t>(vulkanStuff.commandBuffers.size()), 
+      vulkanStuff.commandBuffers.data());
+
+   vkDestroyPipeline(vulkanDevice.device, graphicsPipeline, nullptr);
+   vkDestroyPipelineLayout(vulkanDevice.device, pipelineLayout, nullptr);
+   vkDestroyRenderPass(vulkanDevice.device, renderPass, nullptr);
+
+   for(size_t i=0; i < swapChainImageViews.size(); i++)
+   {
+      vkDestroyImageView(vulkanDevice.device, swapChainImageViews[i], nullptr);
+   }
+
+   vkDestroySwapchainKHR(vulkanDevice.device, swapChain, nullptr);
+}
+
 void HelloTriangleApplication::recreateSwapChain()
 {
    vkDeviceWaitIdle(vulkanDevice.device);
-
+   cleanupSwapChain();
+   
    createSwapChain();
    createImageViews();
    createRenderPass();
@@ -995,12 +1026,6 @@ void HelloTriangleApplication::cleanUp()
 {
    vkFreeMemory(vulkanDevice.device, uniformBuffers.cameraBufferMemory, nullptr);
    vkDestroyBuffer(vulkanDevice.device, uniformBuffers.cameraBuffer, nullptr);
-
-   //vkFreeMemory(vulkanDevice.device, uniformBuffers.dynamicBufferMemory, nullptr);
-   //vkDestroyBuffer(vulkanDevice.device, uniformBuffers.dynamicBuffer, nullptr);
-
-   delete texture;
-   texture = nullptr;
 }
 
 void HelloTriangleApplication::createSwapChain()

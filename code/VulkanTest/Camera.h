@@ -4,7 +4,7 @@
 #include <iostream>
 #include <array>
 
-
+// TODO: Camera should have it's own buffer.
 class Camera
 {
   

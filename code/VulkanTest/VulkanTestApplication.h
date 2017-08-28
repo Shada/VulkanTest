@@ -26,6 +26,7 @@ protected:
 public:
    void run();
 
+   void cleanupSwapChain();
    void recreateSwapChain();
 
    struct
