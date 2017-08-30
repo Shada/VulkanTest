@@ -4,7 +4,6 @@
 #include "VulkanShader.h"
 #include "Camera.h"
 #include "Mesh.h"
-#include "Texture.h"
 #include "WorldObject.h"
 #include "VulkanDevice.hpp"
 
@@ -64,9 +63,7 @@ private:
 
    VkDebugReportCallbackEXT callback;
    
-   // TODO: move texture to the mesh?
    Mesh *mesh;
-   Texture *texture;
    WorldObject *worldObject;
    WorldObjectToMeshMapper *worldObjectToMeshMapper;
 
@@ -75,7 +72,6 @@ private:
    VulkanShader fragShader;
 
    VkDescriptorSetLayout descriptorSetLayoutMatrixBuffer;
-   VkDescriptorSetLayout descriptorSetLayoutSampler;
 
    VkPipelineLayout pipelineLayout;
 
@@ -98,7 +94,6 @@ private:
    VkDescriptorPool descriptorPool;
 
    VkDescriptorSet descriptorSetMatrixBuffer;
-   std::vector<VkDescriptorSet> descriptorSetSampler;
 
    VkViewport viewport ={};
 
@@ -126,8 +121,6 @@ private:
 
    void createDepthResources();
 
-   int createTextureImage(std::string filename);
-
    // These two are used for depth resource and swapchain. So I should probably make them helper functions, so I can use them from texture as well. 
    // or make them accessible from texture by changing the architecture.
    void createImage(uint32_t, uint32_t, VkFormat, VkImageTiling, VkImageUsageFlags, VkMemoryPropertyFlags, VkImage*, VkDeviceMemory*);
@@ -140,7 +133,7 @@ private:
 
    void createDescriptorPool();
 
-   void createDescriptorSet(int textureIndex);
+   void createDescriptorSet();
 
    void createCommandBuffers();
 

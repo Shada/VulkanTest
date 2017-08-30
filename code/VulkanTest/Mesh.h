@@ -112,9 +112,6 @@ private:
 
    uint32_t numberOfMeshes = 0;
 
-   // TODO: might need a vector of these to make sure that I can expand with more descriptors if needed.
-   // for example have a decriptorPool for up to ~100 meshes, and then create a new descriptorPool if it's needed.
-   VkDescriptorPool descriptorPool;
 
    Texture *texture;
 
@@ -123,4 +120,28 @@ private:
    inline void loadMaterials(std::vector<tinyobj::material_t>& materials);
 
    inline void extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& attrib, tinyobj::index_t& index);
+
+
+   // descriptorstuff
+
+   // TODO: might need a vector of these to make sure that I can expand with more descriptors if needed.
+   // for example have a decriptorPool for up to ~100 meshes, and then create a new descriptorPool if it's needed.
+   VkDescriptorPool descriptorPool;
+   VkDescriptorSetLayout descriptorSetLayout;
+   std::vector<VkDescriptorSet> descriptorSet;
+public:
+   void createDescriptorSetLayout();
+   void createDescriptorPool();
+   void createDescriptorSet();
+
+   VkDescriptorSetLayout getDescriptorSetLayout()
+   {
+      return descriptorSetLayout;
+   }
+
+   // TODO: Change to look directly at submesh. material/submesh should have descriptorId?
+   VkDescriptorSet *getDescriptorForMesh(int meshId)
+   {
+      return &descriptorSet.at(material.at(subMeshMap[meshId][0].materialId).diffuseTextureId);
+   }
 };

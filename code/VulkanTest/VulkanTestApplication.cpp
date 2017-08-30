@@ -39,9 +39,6 @@ void HelloTriangleApplication::run()
    delete worldObject;
    worldObject = nullptr;
 
-   delete texture;
-   texture = nullptr;
-
    delete worldObjectToMeshMapper;
    worldObjectToMeshMapper = nullptr;
 }
@@ -79,8 +76,6 @@ void HelloTriangleApplication::initVulkan()
    // this should be somewhere esle, like initApplication, initGame, or something like that..
    mesh = new Mesh(&vulkanDevice);
 
-   texture = new Texture(&vulkanDevice);
-
    worldObjectToMeshMapper = new WorldObjectToMeshMapper();
    worldObject = new WorldObject(worldObjectToMeshMapper, &vulkanDevice);
 
@@ -97,15 +92,12 @@ void HelloTriangleApplication::initVulkan()
    createCommandPool();
    createDepthResources();
    createFrameBuffers();
-   int textureIndex = createTextureImage(TEXTURE_PATH_CHALET);
    loadModel();
    createUniformBuffer();
    createDescriptorPool();
    worldObject->createDescriptorPool();
-   createDescriptorSet(textureIndex);
+   createDescriptorSet();
    worldObject->createDescriptorSet();
-   textureIndex = createTextureImage(TEXTURE_PATH_STORMTROOPER);
-   createDescriptorSet(textureIndex);
 
    int index = worldObject->addInstance(1, glm::vec3(0.f, 1.f, 0.f), glm::vec3(0.f), glm::vec3(.3f));
    worldObject->setRotationSpeed(index, 0.0f, 0.0f, 0.0f);
@@ -292,26 +284,7 @@ void HelloTriangleApplication::createDescriptorSetLayout()
       throw std::runtime_error("failed to create Matrix Buffer descriptor set layout!");
    }
 
-   VkDescriptorSetLayoutBinding samplerLayoutBindingSampler =
-      vulkan::initialisers::createDescriptorSetLayoutBinding(
-         2,
-         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
-         VK_SHADER_STAGE_FRAGMENT_BIT);
-
-   std::vector<VkDescriptorSetLayoutBinding> bindingsSampler=
-   {
-      samplerLayoutBindingSampler
-   };
-
-   VkDescriptorSetLayoutCreateInfo layoutInfoSampler ={};
-   layoutInfoSampler.sType        = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_LAYOUT_CREATE_INFO;
-   layoutInfoSampler.bindingCount = static_cast<uint32_t>(bindingsSampler.size());
-   layoutInfoSampler.pBindings    = bindingsSampler.data();
-
-   if(vkCreateDescriptorSetLayout(vulkanDevice.device, &layoutInfoSampler, nullptr, &descriptorSetLayoutSampler) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to create Sampler descriptor set layout!");
-   }
+   mesh->createDescriptorSetLayout();
 }
 
 void HelloTriangleApplication::createGraphicsPipeline()
@@ -434,7 +407,7 @@ void HelloTriangleApplication::createGraphicsPipeline()
    {
       descriptorSetLayoutMatrixBuffer,
       worldObject->getDescriptorSetLayout(),
-      descriptorSetLayoutSampler
+      mesh->getDescriptorSetLayout()
    };
 
    VkPipelineLayoutCreateInfo pipelineLayoutInfo ={};
@@ -536,19 +509,6 @@ void HelloTriangleApplication::createDepthResources()
       VK_IMAGE_LAYOUT_DEPTH_STENCIL_ATTACHMENT_OPTIMAL);
 }
 
-
-/// TODO: couple together with the mesh. 
-/// maybe move it into the mesh class? or separate class, but mesh have an instance?
-int HelloTriangleApplication::createTextureImage(std::string filename)
-{
-   int textureIndex = texture->loadTexture(filename);
-   if(textureIndex == -1)
-   {
-      throw std::runtime_error("failed to load texture image!");
-   }
-   return textureIndex;
-}
-
 void HelloTriangleApplication::createImage(
    uint32_t width, uint32_t height,
    VkFormat format, VkImageTiling tiling,
@@ -643,17 +603,16 @@ void HelloTriangleApplication::createUniformBuffer()
 
 void HelloTriangleApplication::createDescriptorPool()
 {
-   std::array<VkDescriptorPoolSize, 2> poolSizes ={};
+   mesh->createDescriptorPool();
+   std::array<VkDescriptorPoolSize, 1> poolSizes ={};
    poolSizes[0].type            = VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER;
-   poolSizes[0].descriptorCount = 200;
-   poolSizes[1].type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   poolSizes[1].descriptorCount = 200;
-
+   poolSizes[0].descriptorCount = 1;
+ 
    VkDescriptorPoolCreateInfo poolInfo ={};
    poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
    poolInfo.poolSizeCount = static_cast<uint32_t>(poolSizes.size());
    poolInfo.pPoolSizes    = poolSizes.data();
-   poolInfo.maxSets       = 200;
+   poolInfo.maxSets       = 1;
 
    if(vkCreateDescriptorPool(vulkanDevice.device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
    {
@@ -662,21 +621,13 @@ void HelloTriangleApplication::createDescriptorPool()
 }
 
 // TODO: These should be moved to respective class.  texture class and camera class.
-void HelloTriangleApplication::createDescriptorSet(int textureIndex)
+void HelloTriangleApplication::createDescriptorSet()
 {
-   VkDescriptorSet tempDescriptor;
-
    VkDescriptorBufferInfo uboBufferInfo ={};
    uboBufferInfo.buffer = uniformBuffers.cameraBuffer;
    uboBufferInfo.offset = 0;
    uboBufferInfo.range  = VK_WHOLE_SIZE;
    
-   
-   VkDescriptorImageInfo imageSamplerInfo ={};
-   imageSamplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
-   imageSamplerInfo.imageView   = texture->getImageView(textureIndex);
-   imageSamplerInfo.sampler     = texture->getSampler(textureIndex);
-
    VkDescriptorSetLayout layoutsMatrixBuffer[] ={ descriptorSetLayoutMatrixBuffer };
 
    VkDescriptorSetAllocateInfo allocInfoMatrixBuffer ={};
@@ -703,36 +654,7 @@ void HelloTriangleApplication::createDescriptorSet(int textureIndex)
 
    vkUpdateDescriptorSets(vulkanDevice.device, static_cast<uint32_t>(descriptorWritesMatrixBuffer.size()), descriptorWritesMatrixBuffer.data(), 0, nullptr);
 
-
-
-   
-   VkDescriptorSetAllocateInfo allocInfoSampler ={};
-   allocInfoSampler.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
-   allocInfoSampler.descriptorPool     = descriptorPool;
-   allocInfoSampler.descriptorSetCount = 1;
-   allocInfoSampler.pSetLayouts        = &descriptorSetLayoutSampler;
-
-   if(vkAllocateDescriptorSets(vulkanDevice.device, &allocInfoSampler, &tempDescriptor) != VK_SUCCESS)
-   {
-      throw std::runtime_error("failed to allocate Sampler descriptor set!");
-   }
-
-   std::array<VkWriteDescriptorSet, 1> descriptorWritesSampler ={};
-
-   descriptorWritesSampler[0].sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
-   descriptorWritesSampler[0].dstSet           = tempDescriptor;
-   descriptorWritesSampler[0].dstBinding       = 2;
-   descriptorWritesSampler[0].dstArrayElement  = 0;
-   descriptorWritesSampler[0].descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
-   descriptorWritesSampler[0].descriptorCount  = 1;
-   descriptorWritesSampler[0].pBufferInfo      = nullptr;
-   descriptorWritesSampler[0].pImageInfo       = &imageSamplerInfo;
-   descriptorWritesSampler[0].pTexelBufferView = nullptr;
-
-   vkUpdateDescriptorSets(vulkanDevice.device, static_cast<uint32_t>(descriptorWritesSampler.size()), descriptorWritesSampler.data(), 0, nullptr);
-
-   descriptorSetSampler.push_back(tempDescriptor);
-
+   mesh->createDescriptorSet();
 }
 
 void HelloTriangleApplication::createCommandBuffers()
@@ -796,7 +718,7 @@ void HelloTriangleApplication::createCommandBuffers()
 
          vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 0, 1, &descriptorSetMatrixBuffer, 0, nullptr);
          vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 1, 1, worldObject->getDescriptorSet(), 1, &dynamicOffset);
-         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, &descriptorSetSampler[meshId], 0, nullptr);
+         vkCmdBindDescriptorSets(vulkanStuff.commandBuffers[i], VK_PIPELINE_BIND_POINT_GRAPHICS, pipelineLayout, 2, 1, mesh->getDescriptorForMesh(meshId), 0, nullptr);
          
          vkCmdDrawIndexed(vulkanStuff.commandBuffers[i], mesh->getNumIndices(meshId), 1, 0, 0, 0);
       }

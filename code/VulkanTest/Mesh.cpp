@@ -180,6 +180,82 @@ inline void Mesh::extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& att
    vertex.colour ={ 1.0f,1.0f,1.0f };
 
 }
+void Mesh::createDescriptorSetLayout()
+{
+   // TODO: Add materia ubo 
+   auto descriptorSetLayoutBinding = vulkan::initialisers::
+      createDescriptorSetLayoutBinding(
+         2,
+         VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
+         VK_SHADER_STAGE_FRAGMENT_BIT);
+
+   auto layoutCreateInfo = vulkan::initialisers::
+      createDescriptorSetLayoutCreateInfo(
+         descriptorSetLayoutBinding);
+
+   if(vkCreateDescriptorSetLayout(vulkanDevice->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to create Mesh Material descriptor set layout!");
+   }
+}
+
+void Mesh::createDescriptorPool()
+{
+   VkDescriptorPoolSize poolSize ={};
+   poolSize.type            = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+   poolSize.descriptorCount = static_cast<uint32_t>(material.size());
+
+   VkDescriptorPoolCreateInfo poolInfo ={};
+   poolInfo.sType         = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+   poolInfo.poolSizeCount = 1;
+   poolInfo.pPoolSizes    = &poolSize;
+   poolInfo.maxSets       = static_cast<uint32_t>(material.size());
+
+   if(vkCreateDescriptorPool(vulkanDevice->device, &poolInfo, nullptr, &descriptorPool) != VK_SUCCESS)
+   {
+      throw std::runtime_error("failed to create descriptor pool!");
+   }
+}
+
+void Mesh::createDescriptorSet()
+{
+   for(auto& mat : material)
+   {
+      VkDescriptorSet tDescriptorSet;
+
+      VkDescriptorSetAllocateInfo allocInfoSampler ={};
+      allocInfoSampler.sType              = VK_STRUCTURE_TYPE_DESCRIPTOR_SET_ALLOCATE_INFO;
+      allocInfoSampler.descriptorPool     = descriptorPool;
+      allocInfoSampler.descriptorSetCount = 1;
+      allocInfoSampler.pSetLayouts        = &descriptorSetLayout;
+
+      if(vkAllocateDescriptorSets(vulkanDevice->device, &allocInfoSampler, &tDescriptorSet) != VK_SUCCESS)
+      {
+         throw std::runtime_error("failed to allocate MatrixBuffer descriptor set!");
+      }
+
+      VkDescriptorImageInfo samplerInfo={};
+      samplerInfo.imageLayout = VK_IMAGE_LAYOUT_SHADER_READ_ONLY_OPTIMAL;
+      samplerInfo.imageView = texture->getImageView(mat.diffuseTextureId); // TODO: one for each material.
+      samplerInfo.sampler = texture->getSampler(mat.diffuseTextureId);
+
+      VkWriteDescriptorSet descriptorWritesSampler ={};
+      descriptorWritesSampler.sType            = VK_STRUCTURE_TYPE_WRITE_DESCRIPTOR_SET;
+      descriptorWritesSampler.dstSet           = tDescriptorSet;
+      descriptorWritesSampler.dstBinding       = 2;
+      descriptorWritesSampler.dstArrayElement  = 0;
+      descriptorWritesSampler.descriptorType   = VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER;
+      descriptorWritesSampler.descriptorCount  = 1;
+      descriptorWritesSampler.pBufferInfo      = nullptr;
+      descriptorWritesSampler.pImageInfo       = &samplerInfo;
+      descriptorWritesSampler.pTexelBufferView = nullptr;
+
+      vkUpdateDescriptorSets(vulkanDevice->device, 1, &descriptorWritesSampler, 0, nullptr);
+
+      descriptorSet.push_back(tDescriptorSet);
+   }
+}
+
 // TODO: Merge to one method that takes argument about which type of buffer it is.
 void Mesh::createIndexBuffer()
 {

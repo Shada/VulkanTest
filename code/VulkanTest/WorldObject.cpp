@@ -89,9 +89,15 @@ void WorldObject::createDescriptorPool()
 
 void WorldObject::createDescriptorSetLayout()
 {
-   auto descriptorSetLayoutBinding = createDescriptorSetLayoutBinding();
+   auto descriptorSetLayoutBinding = vulkan::initialisers::
+      createDescriptorSetLayoutBinding(
+         1,
+         VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC,
+         VK_SHADER_STAGE_VERTEX_BIT);
 
-   auto layoutCreateInfo = vulkan::initialisers::createDescriptorSetLayoutCreateInfo(descriptorSetLayoutBinding);
+   auto layoutCreateInfo = vulkan::initialisers::
+      createDescriptorSetLayoutCreateInfo(
+         descriptorSetLayoutBinding);
 
    if(vkCreateDescriptorSetLayout(vulkanDevice->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)
    {

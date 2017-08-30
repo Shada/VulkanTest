@@ -125,11 +125,6 @@ private:
    std::vector<glm::vec3> targetRotation;
    std::vector<bool> isChangingRotation;
 
-   VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding()
-   {
-      return vulkan::initialisers::createDescriptorSetLayoutBinding(1, VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER_DYNAMIC, VK_SHADER_STAGE_VERTEX_BIT);
-   }
-
 public:
    void createDescriptorSetLayout();
    void createDescriptorPool();
