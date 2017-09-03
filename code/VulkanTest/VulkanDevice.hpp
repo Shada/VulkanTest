@@ -151,7 +151,7 @@ namespace vks
          VkBuffer *buffer,
          VkDeviceMemory *bufferMemory)
       {
-         // use vulkan::initialisers::bufferCreateInfo()
+         // use vkn::inits::bufferCreateInfo()
          VkBufferCreateInfo bufferInfo ={};
          bufferInfo.sType       = VK_STRUCTURE_TYPE_BUFFER_CREATE_INFO;
          bufferInfo.size        = size;

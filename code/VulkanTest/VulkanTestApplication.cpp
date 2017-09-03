@@ -264,7 +264,7 @@ void HelloTriangleApplication::createDescriptorSetLayout()
    worldObject->createDescriptorSetLayout();
    
    VkDescriptorSetLayoutBinding uboLayoutBindingMatrix =
-      vulkan::initialisers::createDescriptorSetLayoutBinding(
+      vkn::inits::descriptorSetLayoutBinding(
          0,
          VK_DESCRIPTOR_TYPE_UNIFORM_BUFFER,
          VK_SHADER_STAGE_VERTEX_BIT);
@@ -1159,6 +1159,31 @@ void HelloTriangleApplication::mainLoop()
 
       worldObject->update(float((double)dt / 1e9f));
 
+      if(glfwGetKey(window, GLFW_KEY_W))
+      {
+         camera.moveForwardsBackwards(float((double)dt / 1e9f), true);
+      }
+      else if(glfwGetKey(window, GLFW_KEY_S))
+      {
+         camera.moveForwardsBackwards(float((double)dt / 1e9f), false);
+      }
+      if(glfwGetKey(window, GLFW_KEY_D))
+      {
+         camera.moveRightLeft(float((double)dt / 1e9f), true);
+      }
+      else if(glfwGetKey(window, GLFW_KEY_A))
+      {
+         camera.moveRightLeft(float((double)dt / 1e9f), false);
+      }
+      if(glfwGetKey(window, GLFW_KEY_R))
+      {
+         camera.moveUpDown(float((double)dt / 1e9f), true);
+      }
+      else if(glfwGetKey(window, GLFW_KEY_F))
+      {
+         camera.moveUpDown(float((double)dt / 1e9f), false);
+      }
+
       updateUniformBuffer();
 
       drawFrame();
@@ -1184,7 +1209,7 @@ void HelloTriangleApplication::updateUniformBuffer()
 {
    // TODO: change this stuff, it's weird
 
-   camera.rotate(); // TODO: Should only bew camera->update(), and not called in this method.
+   camera.updateMatrices(); // TODO: Should only bew camera->update(), and not called in this method.
 
    Camera::MatrixBufferObject *mbo = &camera.getCameraData();
 

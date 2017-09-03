@@ -26,8 +26,22 @@ public:
    // how to change speed, etc. etc.
    void move(glm::vec3 direction, float distance);
    void rotate(glm::vec3 yawPichRollAngles);
-   void rotate();
+   void updateMatrices();
    void setWindowSize(int width, int height);
+
+   void moveForwardsBackwards(float dt, bool forwards)
+   {
+      position += (float)((int)forwards * 2 - 1) * (dt) * viewDirection;
+   }
+   void moveRightLeft(float dt, bool right)
+   {
+      auto rightDirection = glm::cross(viewDirection, upDirection);
+      position += (float)((int)right * 2 - 1) * (dt) * rightDirection;
+   }
+   void moveUpDown(float dt, bool up)
+   {
+      position += (float)((int)up * 2 - 1) * (dt) * upDirection;
+   }
 private:
 
    glm::vec3 position;

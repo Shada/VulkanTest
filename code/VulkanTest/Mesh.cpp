@@ -183,14 +183,14 @@ inline void Mesh::extractVertexFromAttrib(Vertex& vertex, tinyobj::attrib_t& att
 void Mesh::createDescriptorSetLayout()
 {
    // TODO: Add materia ubo 
-   auto descriptorSetLayoutBinding = vulkan::initialisers::
-      createDescriptorSetLayoutBinding(
+   auto descriptorSetLayoutBinding = vkn::inits::
+      descriptorSetLayoutBinding(
          2,
          VK_DESCRIPTOR_TYPE_COMBINED_IMAGE_SAMPLER,
          VK_SHADER_STAGE_FRAGMENT_BIT);
 
-   auto layoutCreateInfo = vulkan::initialisers::
-      createDescriptorSetLayoutCreateInfo(
+   auto layoutCreateInfo = vkn::inits::
+      descriptorSetLayoutCreateInfo(
          descriptorSetLayoutBinding);
 
    if(vkCreateDescriptorSetLayout(vulkanDevice->device, &layoutCreateInfo, nullptr, &descriptorSetLayout) != VK_SUCCESS)

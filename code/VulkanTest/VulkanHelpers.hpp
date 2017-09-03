@@ -1,11 +1,14 @@
 #pragma once
 #include <vulkan\vulkan.hpp>
 
-namespace vulkan
+namespace vkn
 {
-   namespace initialisers
+   namespace inits
    {
-      inline VkDescriptorSetLayoutBinding createDescriptorSetLayoutBinding(uint32_t binding, VkDescriptorType descriptorType, VkShaderStageFlags shaderStageFlags)
+      inline VkDescriptorSetLayoutBinding descriptorSetLayoutBinding(
+         uint32_t binding, 
+         VkDescriptorType descriptorType, 
+         VkShaderStageFlags shaderStageFlags)
       {
          VkDescriptorSetLayoutBinding descriptorSetLayoutBinding ={};
 
@@ -18,7 +21,8 @@ namespace vulkan
          return descriptorSetLayoutBinding;
       }
 
-      inline VkDescriptorSetLayoutCreateInfo createDescriptorSetLayoutCreateInfo(VkDescriptorSetLayoutBinding binding)
+      inline VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo(
+         VkDescriptorSetLayoutBinding binding)
       {
          VkDescriptorSetLayoutCreateInfo layoutInfo ={};
 
@@ -29,7 +33,8 @@ namespace vulkan
          return layoutInfo;
       }
 
-      inline VkDescriptorSetLayoutCreateInfo createDescriptorSetLayoutCreateInfo(std::vector<VkDescriptorSetLayoutBinding> bindings)
+      inline VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo(
+         std::vector<VkDescriptorSetLayoutBinding> bindings)
       {
          VkDescriptorSetLayoutCreateInfo layoutInfo ={};
 
@@ -39,7 +44,10 @@ namespace vulkan
 
          return layoutInfo;
       }
-      inline VkDescriptorSetLayoutCreateInfo createDescriptorSetLayoutCreateInfo(const VkDescriptorSetLayoutBinding* bindings, uint32_t bindingCount)
+      
+      inline VkDescriptorSetLayoutCreateInfo descriptorSetLayoutCreateInfo(
+         const VkDescriptorSetLayoutBinding* bindings, 
+         uint32_t bindingCount)
       {
          VkDescriptorSetLayoutCreateInfo layoutInfo ={};
 
@@ -50,7 +58,21 @@ namespace vulkan
          return layoutInfo;
       }
 
-      
+      inline VkDescriptorPoolCreateInfo descriptorPoolCreateInfo(
+         uint32_t poolSizeCount,
+         VkDescriptorPoolSize *poolSizes,
+         uint32_t maxSets
+      )
+      {
+         VkDescriptorPoolCreateInfo poolCreateInfo={};
+
+         poolCreateInfo.sType          = VK_STRUCTURE_TYPE_DESCRIPTOR_POOL_CREATE_INFO;
+         poolCreateInfo.maxSets        = maxSets;
+         poolCreateInfo.poolSizeCount  = poolSizeCount;
+         poolCreateInfo.pPoolSizes     = poolSizes;
+
+         return poolCreateInfo;
+      }
    };
 
 };
